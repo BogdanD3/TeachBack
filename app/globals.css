@@ -3,12 +3,197 @@
 @source "../components";
 @source "../lib";
 
+/* ---------------------------------------------------------------
+   Color tokens — DESIGN.md. Use only these.
+---------------------------------------------------------------- */
 :root {
   --paper: #fbf7f0;
+  --paper-2: #f3ece0;
+  --line: #e2d8c7;
   --ink: #1e2a3a;
+  --ink-2: #5a6472;
+  --coral: #e4572e;
+  --coral-dark: #c2441f;
+  --highlight: #ffd166;
+  --understood: #2e9e6b;
+  --shaky: #e8a23a;
+  --gap: #d64545;
+  --teal: #1f7a8c;
 }
 
-body {
-  background: var(--paper);
-  color: var(--ink);
+@theme inline {
+  /* Drop Tailwind's default palette so only brand tokens exist. */
+  --color-*: initial;
+  --color-white: #ffffff;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-paper: var(--paper);
+  --color-paper-2: var(--paper-2);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-coral: var(--coral);
+  --color-coral-dark: var(--coral-dark);
+  --color-highlight: var(--highlight);
+  --color-understood: var(--understood);
+  --color-shaky: var(--shaky);
+  --color-gap: var(--gap);
+  --color-teal: var(--teal);
+
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+
+  --radius-card: 12px;
+  --radius-bubble: 20px;
+
+  --shadow-stack: 0 4px 0 var(--line);
+  --shadow-stack-ink: 0 4px 0 var(--ink);
+
+  --container-content: 1120px;
+  --container-reading: 680px;
+}
+
+/* ---------------------------------------------------------------
+   Typography scale (mobile / desktop)
+---------------------------------------------------------------- */
+@utility t-display {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 40px;
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+  @media (width >= 48rem) {
+    font-size: 64px;
+  }
+}
+@utility t-h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 32px;
+  line-height: 1.15;
+  @media (width >= 48rem) {
+    font-size: 44px;
+  }
+}
+@utility t-h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 1.2;
+  @media (width >= 48rem) {
+    font-size: 32px;
+  }
+}
+@utility t-h3 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.35;
+  @media (width >= 48rem) {
+    font-size: 20px;
+  }
+}
+@utility t-body {
+  font-size: 16px;
+  line-height: 1.6;
+}
+@utility t-small {
+  font-size: 14px;
+  line-height: 1.5;
+}
+@utility t-meta {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 12px;
+  line-height: 1.4;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* Paper-stack hover lift for cards */
+@utility lift {
+  transition:
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out;
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-stack);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+@utility gutter {
+  padding-inline: 16px;
+  @media (width >= 48rem) {
+    padding-inline: 32px;
+  }
+}
+
+/* ---------------------------------------------------------------
+   Base
+---------------------------------------------------------------- */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--ink);
+    outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--highlight);
+    color: var(--ink);
+  }
+  a {
+    color: inherit;
+  }
+}
+
+/* Highlighter marker stroke behind a word */
+.marker {
+  display: inline-block;
+  background: linear-gradient(
+    to top,
+    var(--highlight) 0,
+    var(--highlight) 40%,
+    transparent 40%
+  );
+  transform: rotate(-1deg);
+  padding-inline: 0.08em;
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--coral) 55%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 14px color-mix(in srgb, var(--coral) 0%, transparent);
+  }
+}
+.pulse-ring {
+  animation: pulse-ring 1.4s ease-out infinite;
 }

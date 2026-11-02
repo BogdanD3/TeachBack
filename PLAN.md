@@ -26,14 +26,14 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ## Phase 1 — Design system
 
-- [ ] Color tokens from DESIGN.md as CSS variables in `globals.css`, mapped in Tailwind
-- [ ] Fonts with `next/font`: Fraunces, Inter, JetBrains Mono
-- [ ] Spacing, radius and "paper stack" hover shadow as Tailwind utilities
-- [ ] `components/ui`: Button (primary, secondary, ghost; sizes; loading state), Card, Input + Label + error text, Textarea, Pill (understood, shaky, gap with icons), Badge, Modal, Tabs, Avatar (initials), Highlight (marker effect), Skeleton, EmptyState, ErrorState
-- [ ] Logo component (SVG wordmark + speech bubble)
-- [ ] `components/teach/Pip.tsx`: SVG with states `idle`, `thinking`, `confused`, `got-it`, animated with framer-motion, respects reduced motion
-- [ ] Site header (logo, nav: Library, Live, Leaderboard, Community, Pricing; login/sign-up or avatar menu) and footer; mobile menu
-- [ ] `/styleguide` page showing every token, font, component and Pip state
+- [x] Color tokens from DESIGN.md as CSS variables in `globals.css`, mapped in Tailwind
+- [x] Fonts with `next/font`: Fraunces, Inter, JetBrains Mono
+- [x] Spacing, radius and "paper stack" hover shadow as Tailwind utilities
+- [x] `components/ui`: Button (primary, secondary, ghost; sizes; loading state), Card, Input + Label + error text, Textarea, Pill (understood, shaky, gap with icons), Badge, Modal, Tabs, Avatar (initials), Highlight (marker effect), Skeleton, EmptyState, ErrorState
+- [x] Logo component (SVG wordmark + speech bubble)
+- [x] `components/teach/Pip.tsx`: SVG with states `idle`, `thinking`, `confused`, `got-it`, animated with framer-motion, respects reduced motion
+- [x] Site header (logo, nav: Library, Live, Leaderboard, Community, Pricing; login/sign-up or avatar menu) and footer; mobile menu
+- [x] `/styleguide` page showing every token, font, component and Pip state
 
 **Done when:** `/styleguide` looks right at 375px and 1280px, all focus states visible.
 
@@ -168,3 +168,8 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Tailwind `source(none)` + explicit `@source` for app/components/lib · auto-scan of the whole folder trips over `.claude`/`.venv`.
 - 2026-11-02 · npm 12 blocks install scripts: approved `prisma`, `@prisma/client`, `@prisma/engines`, `esbuild` (needed for engines and tsx); denied no-op/optional ones.
 - 2026-11-02 · Gemini models: main `gemini-3.6-flash`, fallback `gemini-3.5-flash` (code defaults) · gemini-2.5-flash no longer available to new keys.
+- 2026-11-02 · Concept pills use ink text with state-coloured icon/border/tint · status colours as text on light bg fail AA, and DESIGN.md forbids new colours.
+- 2026-11-02 · Links and coral text use `--coral-dark`; primary buttons keep `--coral` bg with white text per DESIGN.md (3.7:1, AA-large/UI only) · brand look vs AA trade-off, recorded here.
+- 2026-11-02 · Tailwind default palette removed (`--color-*: initial`) · makes off-token colours impossible.
+- 2026-11-02 · Teach session renders as a full-screen layer over the site chrome · keeps one root layout while giving the chat a fixed input bar.
+- 2026-11-02 · Playwright: try `/usr/bin/chromium` first, fall back to Playwright's cached headless shell · system Chromium aborts inside the Claude sandbox (socket() not permitted).

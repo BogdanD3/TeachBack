@@ -1,3 +1,4 @@
+import { Eye } from "lucide-react";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Pill, type ConceptStateName } from "@/components/ui/Pill";
 
@@ -7,14 +8,23 @@ type Props = {
   evidence: string;
   feedback: string;
   conceptStateId?: string;
+  peeked?: boolean;
 };
 
-export function ConceptResult({ name, state, evidence, feedback, conceptStateId }: Props) {
+export function ConceptResult({ name, state, evidence, feedback, conceptStateId, peeked }: Props) {
   return (
     <li className="rounded-card border border-line bg-white p-4 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="t-h3">{name}</h3>
-        <Pill state={state} />
+        <div className="flex flex-wrap items-center gap-2">
+          {peeked && (
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper-2 px-2.5 py-1 font-mono text-xs font-medium uppercase tracking-[0.08em]" title="You used Peek on this concept">
+              <Eye className="size-3.5" aria-hidden />
+              Peeked
+            </span>
+          )}
+          <Pill state={state} />
+        </div>
       </div>
       {evidence ? (
         <blockquote className="mt-3 border-l-[3px] border-coral pl-4 italic text-ink">

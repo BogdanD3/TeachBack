@@ -194,10 +194,12 @@ Lint + build + e2e + commit after each numbered item. Never reseed `prisma/dev.d
 2. Hydration
    - [x] `suppressHydrationWarning` on `<body>` (Grammarly extension)
 3. Learn before teaching
-   - [ ] Primer at `/library/[slug]/learn` (quick) and `?depth=full` (from scratch): generated once per topic + depth, cached in the DB, server-rendered; prompt in PROMPTS.md + lib/prompts.ts; demo primers
-   - [ ] Topic page: three start options (teach / quick primer / from scratch)
-   - [ ] "Peek" in the teach session: 1–2 sentence hint from the primer, costs 5 points, recorded on the session; the gap report notes peeked concepts
-   - [ ] DESIGN.md: primer page and Peek button
+   - [x] Primer at `/library/[slug]/learn` (quick) and `?depth=full` (from scratch): generated once per topic + depth, cached in the DB, server-rendered; prompt in PROMPTS.md + lib/prompts.ts; demo primers
+   - [x] Topic page: three start options (teach / quick primer / from scratch)
+   - [x] "Peek" in the teach session: 1–2 sentence hint from the primer, costs 5 points, recorded on the session; the gap report notes peeked concepts
+   - [x] DESIGN.md: primer page and Peek button
+
+   > Verified: `E2E_PROD=1 bash scripts/e2e.sh primer.py learning.py check-404.sh check-ssr.sh` pass (start options, quick/full primer, peek costs 5 then free, peek moves on after a concept is covered, report marks 2 peeked concepts; `/library/<bad>/learn` is a real 404; primer text is in the server HTML). Screens checked at 375 and 1280 (`debug_primer.py`).
 4. Lessons reachable everywhere
    - [ ] Map: shaky/gap concept → "Fix this gap" button to its lesson
    - [ ] Dashboard: "Your lessons" section; weakest concepts link to their lessons
@@ -297,4 +299,12 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Chat list is `aria-busy` while Pip streams · screen readers announce the finished reply once, not every word; e2e waits for `aria-busy="false"` (`wait_pip`).
 - 2026-11-02 · Timings. Before (user, real API): nothing visible until the full reply, 5–10 s; lessons ~15 s behind a static skeleton. After, demo mode on a production build (`learning.py`): thinking bubble 23 ms after Enter, first words 106 ms, full reply 852 ms. Real API to be measured by the user: the server logs `[ai] pip streamed by <model>: first text X ms, done Y ms` and `[ai] lesson answered by <model> in X ms`; `npm run ai:check` now also prints stream first-words/done times for the current `PIP_THINKING`.
 - 2026-11-02 · (user) `suppressHydrationWarning` on `<body>` only · it silences attribute mismatches on that one element (Grammarly adds `data-gr-*`), not on the page content.
+- 2026-11-02 · Primers: new `Primer` table (unique per topic + depth `quick|full`), migration `primers_peeks`; `TeachSession.peeks` stores peeked concept names · **User: run `npm run db:deploy` once on your `prisma/dev.db`** (applies the migration, no reset/seed; Claude never touches dev.db).
+- 2026-11-02 · Only Gemini primers are cached; when the API is down the demo primer is rebuilt per request · otherwise one outage would pin a canned primer forever. The primer route is public (content page, server-rendered for BotLens) and rate-limited per user, or per IP for visitors.
+- 2026-11-02 · "Teach me from scratch" = the same page with `?depth=full`: a longer primer with "Going deeper" and "Common mistake" per concept · one prompt with a depth switch, cached separately.
+- 2026-11-02 · Each primer concept carries a 1–2 sentence `hint`; Peek shows it (cached primer → demo primer → concept description), so Peek never calls the AI.
+- 2026-11-02 · Peek picks the uncovered concept whose name shares the most words with Pip's last message, else the first uncovered one in topic order · cheap guess at "the concept Pip is asking about" without an AI call.
+- 2026-11-02 · Peek costs 5 points once per concept per session (re-peeking is free), recorded as a negative `PointEvent` (`reason: peek`); points never go below 0 · new users with 0 points can still peek. No BotLens check on peek · it only costs the user points and isn't on the action list.
+- 2026-11-02 · Gap report shows a neutral "Peeked" badge per concept plus a one-line summary; the evaluation prompt is unchanged · the AI grades what was explained, the badge tells the user they had help.
+- 2026-11-02 · Chat placeholder shortened to "Explain it to Pip…" · the old text wrapped inside the 48px input at 375px.
 - 2026-11-02 · Gap report and lesson waits show `ProgressSteps`: Pip thinking + status lines that tick every 2.6 s and stop on the last one · the work is one server call, so the lines are paced, not real progress events.

@@ -44,6 +44,7 @@ async function wipe() {
   await db.conceptState.deleteMany();
   await db.message.deleteMany();
   await db.teachSession.deleteMany();
+  await db.primer.deleteMany();
   await db.concept.deleteMany();
   await db.topic.deleteMany();
   await db.session.deleteMany();

@@ -71,7 +71,7 @@ export function ChatInput({ value, onChange, onSend, disabled }: Props) {
             e.currentTarget.form?.requestSubmit();
           }
         }}
-        placeholder={mic.listening ? "Listening…" : "Explain it in your own words…"}
+        placeholder={mic.listening ? "Listening…" : "Explain it to Pip…"}
         maxLength={2000}
         className="min-h-12 flex-1 resize-none rounded-[24px] border-[1.5px] border-line bg-white px-4 py-3 text-base leading-6 focus:border-coral focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
       />

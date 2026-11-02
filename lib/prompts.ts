@@ -91,6 +91,49 @@ Return ONLY valid JSON:
 }`;
 }
 
+/** 5. Primer (learn before teaching). Must return JSON. depth "quick" = 2–3 min read, "full" = from scratch. */
+export function primerPrompt(topicTitle: string, concepts: { name: string; description: string }[], depth: "quick" | "full"): string {
+  const length =
+    depth === "quick"
+      ? "a 2-3 minute read (350-500 words in total)"
+      : "a 5-7 minute read (800-1100 words in total) for someone starting from zero";
+  const extra =
+    depth === "quick"
+      ? '- Leave "deeper" and "mistake" as empty strings.'
+      : '- For each concept also write "deeper" (2-4 sentences: the how and why, one level down) and "mistake" (one common misconception, one sentence).';
+  return `Write a primer that prepares a student to explain "${topicTitle}" to a complete beginner.
+
+Concepts, in this order:
+${concepts.map((c) => `- ${c.name}: ${c.description}`).join("\n")}
+
+Length: ${length}.
+
+Rules:
+- Explain each concept simply, in plain language, as if to a curious 14-year-old.
+- Give each concept exactly one everyday example or analogy.
+- Define every technical word the first time you use it.
+${extra}
+- "hint" is a 1-2 sentence nudge that reminds the student of the key idea without explaining it fully. It is shown when the student gets stuck while teaching.
+- Don't end with a call to action; the page adds its own.
+
+Return ONLY valid JSON:
+{
+  "title": "short title",
+  "intro": "2-3 sentences: what this topic is and why it matters",
+  "concepts": [
+    { "name": "exact concept name", "explanation": "2-4 sentences, markdown allowed", "example": "1-2 sentences", "hint": "1-2 sentences", "deeper": "", "mistake": "" }
+  ],
+  "recap": "2 sentences that tie the concepts together"
+}`;
+}
+
+/** 6. Voice transcription; the audio goes along as inline data. */
+export function transcribePrompt(topicTitle: string): string {
+  return `Transcribe this recording of a student explaining "${topicTitle}" to a beginner.
+Return only the spoken words as plain text, with normal punctuation. No timestamps, no speaker labels, no comments.
+If nothing intelligible was said, return an empty string.`;
+}
+
 /** 4. Seeding topics (optional helper). */
 export function topicSeedPrompt(subject: string): string {
   return `Create a learning topic for a study platform.

@@ -42,6 +42,7 @@ export default async function TeachPage({ params, searchParams }: Props) {
       topic={{ slug: topic.slug, title: topic.title, concepts: topic.concepts.map((c) => c.name) }}
       initialMessages={session.messages.map((m) => ({ id: m.id, role: m.role as "teacher" | "pip", content: m.content, confused: m.confused }))}
       initialCovered={splitCovered(session.covered)}
+      initialPeeks={splitCovered(session.peeks)}
     />
   );
 }

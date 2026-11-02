@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Eye, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ConceptResult } from "@/components/report/ConceptResult";
@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { readEvaluation } from "@/lib/evaluation";
 import { formatDate } from "@/lib/format";
+import { splitCovered } from "@/lib/topics";
 
 export const metadata: Metadata = { title: "Gap report", robots: { index: false } };
 
@@ -37,6 +38,7 @@ export default async function ReportPage({ params }: { params: Promise<{ session
   const states = await db.conceptState.findMany({ where: { userId: user.id, conceptId: { in: session.topic.concepts.map((c) => c.id) } } });
   const idByName = new Map(session.topic.concepts.map((c) => [c.name, states.find((s) => s.conceptId === c.id)?.id]));
   const concepts = [...ev.concepts].sort((a, b) => order[a.state] - order[b.state]);
+  const peeks = splitCovered(session.peeks);
 
   return (
     <div className="gutter mx-auto max-w-[880px] py-8 md:py-12">
@@ -57,9 +59,15 @@ export default async function ReportPage({ params }: { params: Promise<{ session
       <h2 className="t-h2 mt-12">Concept by concept</h2>
       <ul className="mt-6 space-y-4">
         {concepts.map((c) => (
-          <ConceptResult key={c.name} {...c} conceptStateId={idByName.get(c.name)} />
+          <ConceptResult key={c.name} {...c} conceptStateId={idByName.get(c.name)} peeked={peeks.includes(c.name)} />
         ))}
       </ul>
+      {peeks.length > 0 && (
+        <p className="mt-4 flex items-center gap-2 text-sm text-ink-2">
+          <Eye className="size-4" aria-hidden />
+          You peeked at {peeks.length === 1 ? "1 concept" : `${peeks.length} concepts`} ({peeks.join(", ")}). Try those without a hint next time.
+        </p>
+      )}
 
       <section aria-labelledby="pip-says" className="mt-12 flex flex-col items-center gap-4 rounded-card border border-line bg-white p-6 text-center sm:flex-row sm:text-left">
         <Pip state={ev.score === ev.concepts.length ? "got-it" : "confused"} size={88} />

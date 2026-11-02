@@ -65,6 +65,20 @@ model Topic {
   reviews       Review[]
   threads       Thread[]
   liveEvents    LiveEvent[]
+  primers       Primer[]
+}
+
+// "Learn before teaching" primer, generated once per topic and depth, then served from here.
+model Primer {
+  id        String   @id @default(cuid())
+  topicId   String
+  topic     Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  depth     String // quick | full
+  content   String // JSON primer
+  source    String // gemini | demo
+  createdAt DateTime @default(now())
+
+  @@unique([topicId, depth])
 }
 
 model Concept {
@@ -89,6 +103,7 @@ model TeachSession {
   topic      Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
   status     String    @default("active") // active | finished
   covered    String    @default("") // pipe-separated concept names Pip reported as covered
+  peeks      String    @default("") // pipe-separated concept names the teacher peeked at (5 points each)
   score      Int?
   pipSummary String?
   evaluation String? // JSON of the evaluation result

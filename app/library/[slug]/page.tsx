@@ -88,9 +88,19 @@ export default async function TopicPage({ params }: Params) {
             <Pip state="confused" size={96} className="mx-auto" />
             <p className="mt-4 font-semibold">Pip has never heard of {topic.title.toLowerCase()}.</p>
             <p className="mt-1 text-sm text-ink-2">Explain it in your own words. About 10 minutes.</p>
-            <ButtonLink href={`/teach/${topic.slug}`} fullWidth className="mt-6" data-action="start_teach">
-              Teach this to Pip
-            </ButtonLink>
+            <div className="mt-6 flex flex-col gap-3" role="group" aria-label="How do you want to start?">
+              <ButtonLink href={`/teach/${topic.slug}`} fullWidth data-action="start_teach">
+                I know this, let me teach
+              </ButtonLink>
+              <ButtonLink href={`/library/${topic.slug}/learn`} variant="secondary" size="lg" fullWidth data-action="open_primer" className="flex-col gap-0! leading-tight">
+                <span>Quick primer first</span>
+                <span className="t-meta font-normal text-ink-2">2–3 min read</span>
+              </ButtonLink>
+              <ButtonLink href={`/library/${topic.slug}/learn?depth=full`} variant="ghost" size="lg" fullWidth data-action="open_primer_full" className="flex-col gap-0! leading-tight">
+                <span>Teach me from scratch</span>
+                <span className="t-meta font-normal text-ink-2">~6 min read</span>
+              </ButtonLink>
+            </div>
           </div>
         </aside>
       </div>

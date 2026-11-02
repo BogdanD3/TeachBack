@@ -123,6 +123,26 @@ Load from Google Fonts via `next/font`.
 **Mini-lesson**
 - Reading width 680px. Title, a 1-sentence "The gap" box on `--highlight` background, lesson text, one simple diagram or example box, 2 check questions with instant feedback, then "Teach Pip again".
 
+**Topic page start options** — three stacked choices in the side card, Pip (confused) on top:
+1. Primary button "I know this, let me teach" → teach session.
+2. Secondary button "Quick primer first" with a mono meta line "2–3 min read".
+3. Ghost button "Teach me from scratch" with "~6 min read".
+
+**Primer** (`/library/[slug]/learn`, `?depth=full` for "from scratch")
+- Reading width 680px. Mono meta line "Primer · 3 min read" (or "From scratch · 6 min read"), H1 title, intro paragraph in body-large (18px).
+- Contents: a numbered list of the concepts (mono numbers 01, 02…) linking to each section.
+- One section per concept: mono number + H2 concept name, explanation, then the example box (same as the lesson's: `--paper-2` card with a coral `Lightbulb` icon and "Example" label). "From scratch" adds "Going deeper" text and a "Common mistake" line with an `AlertCircle` icon in `--gap` (text stays ink).
+- Recap in a `--highlight` box with the "Recap" mono label (like "The gap" box).
+- Ends with a white card: Pip (got-it) + "Now teach it to Pip" primary button. A small link switches between the quick and the full version.
+
+**Peek** (teach session)
+- Secondary-style round pill button in the input bar's top row, left of the text: `Eye` icon + "Peek · 5 pts". Disabled while Pip is replying.
+- The hint appears above the input as a card on `--highlight/40` with a 1.5px `--highlight` border, mono label "Peek · {concept}", the 1–2 sentence hint, and a close (X) button. A peeked concept is free to peek again.
+- Gap report: concepts that needed a peek get a neutral mono badge "Peeked" (Eye icon) next to the state pill, and the summary line says how many peeks were used.
+
+**Progress screen** (gap report, lesson, primer)
+- Pip (thinking) + H3 title, then up to 5 status lines that appear one by one: done lines get a `--understood` check and ink-2 text, the current line is ink 600 with a pulsing coral dot.
+
 **Leaderboard** — table with rank (mono), avatar initials, name, points, streak. Top 3 get a small coral/ink/teal ribbon. Monthly prize banner on top.
 
 **Community** — thread list (title, topic tag, reply count, time), thread page with replies, review cards with stars.

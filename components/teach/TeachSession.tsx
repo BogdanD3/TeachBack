@@ -11,6 +11,7 @@ import { ChatInput } from "./ChatInput";
 import { ProgressSteps } from "./ProgressSteps";
 import { ChatMessage, type ChatMsg } from "./ChatMessage";
 import { ConceptProgress } from "./ConceptProgress";
+import { PeekBar } from "./PeekBar";
 import { Pip, type PipState } from "./Pip";
 import { useSpeechOutput } from "./useSpeech";
 
@@ -19,6 +20,7 @@ type Props = {
   topic: { slug: string; title: string; concepts: string[] };
   initialMessages: ChatMsg[];
   initialCovered: string[];
+  initialPeeks: string[];
 };
 
 type Done = { type: "done"; id: string; reply: string; covered: string[]; confused: boolean };
@@ -26,7 +28,7 @@ type StreamEvent = { type: "delta"; text: string } | Done | { type: "error"; mes
 const VOICE_KEY = "tb_pip_voice";
 const REPORT_STEPS = ["Reading your explanation…", "Checking each concept…", "Finding quotes from what you said…", "Asking Pip what still confuses them…", "Writing your gap report…"];
 
-export function TeachSession({ sessionId, topic, initialMessages, initialCovered }: Props) {
+export function TeachSession({ sessionId, topic, initialMessages, initialCovered, initialPeeks }: Props) {
   const router = useRouter();
   const [messages, setMessages] = useState(initialMessages);
   const [covered, setCovered] = useState(initialCovered);
@@ -191,6 +193,7 @@ export function TeachSession({ sessionId, topic, initialMessages, initialCovered
       </div>
 
       <div className="border-t border-line bg-paper-2 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+        <PeekBar sessionId={sessionId} disabled={sending || finishing} initialPeeks={initialPeeks} />
         <ChatInput value={input} onChange={setInput} onSend={() => send(input)} disabled={sending || finishing} />
       </div>
 

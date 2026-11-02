@@ -38,7 +38,29 @@ export const lessonSchema = z.object({
 });
 export type LessonContent = z.infer<typeof lessonSchema>;
 
-export type ChatTurn = { role: "teacher" | "pip"; content: string };
+export const primerDepthSchema = z.enum(["quick", "full"]);
+export type PrimerDepth = z.infer<typeof primerDepthSchema>;
+
+export const primerSchema = z.object({
+  title: z.string().min(1),
+  intro: z.string().min(1),
+  concepts: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        explanation: z.string().min(1),
+        example: z.string().default(""),
+        hint: z.string().min(1),
+        deeper: z.string().default(""),
+        mistake: z.string().default(""),
+      }),
+    )
+    .min(1),
+  recap: z.string().default(""),
+});
+export type PrimerContent = z.infer<typeof primerSchema>;
+
+export type ChatTurn ={ role: "teacher" | "pip"; content: string };
 
 export type TopicContext = {
   slug: string;

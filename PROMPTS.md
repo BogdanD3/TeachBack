@@ -129,6 +129,53 @@ Suggested seed topics: Photosynthesis, How the Internet works, Supply and demand
 
 ---
 
+## 5. Primer (learn before teaching)
+
+Generated once per topic and depth, cached in the `Primer` table and server-rendered at `/library/{slug}/learn`. `{depth}` is `quick` ("Quick primer first", 2–3 min) or `full` ("Teach me from scratch", 5–7 min). Each concept's `hint` is what the **Peek** button shows in the teach session, so Peek needs no extra AI call. Thinking level: medium.
+
+```
+Write a primer that prepares a student to explain "{topic_title}" to a complete beginner.
+
+Concepts, in this order:
+{concept_name}: {concept_description}   (one line per concept)
+
+Length: {quick: "a 2-3 minute read (350-500 words in total)" | full: "a 5-7 minute read (800-1100 words in total) for someone starting from zero"}.
+
+Rules:
+- Explain each concept simply, in plain language, as if to a curious 14-year-old.
+- Give each concept exactly one everyday example or analogy.
+- Define every technical word the first time you use it.
+- {quick: Leave "deeper" and "mistake" as empty strings. | full: For each concept also write "deeper" (2-4 sentences: the how and why, one level down) and "mistake" (one common misconception, one sentence).}
+- "hint" is a 1-2 sentence nudge that reminds the student of the key idea without explaining it fully. It is shown when the student gets stuck while teaching.
+- Don't end with a call to action; the page adds its own.
+
+Return ONLY valid JSON:
+{
+  "title": "short title",
+  "intro": "2-3 sentences: what this topic is and why it matters",
+  "concepts": [
+    { "name": "exact concept name", "explanation": "2-4 sentences, markdown allowed", "example": "1-2 sentences", "hint": "1-2 sentences", "deeper": "", "mistake": "" }
+  ],
+  "recap": "2 sentences that tie the concepts together"
+}
+```
+
+Demo mode: a pre-written Photosynthesis primer (both depths) in `lib/demo-primers.ts`; other topics are built from the concept descriptions.
+
+---
+
+## 6. Voice transcription
+
+`POST /api/transcribe` sends the recorded audio (webm/ogg/mp4, max 60 s) as inline data together with this prompt. Main model, then fallback. Demo mode returns a fixed Photosynthesis transcript.
+
+```
+Transcribe this recording of a student explaining "{topic_title}" to a beginner.
+Return only the spoken words as plain text, with normal punctuation. No timestamps, no speaker labels, no comments.
+If nothing intelligible was said, return an empty string.
+```
+
+---
+
 ## Demo mode responses
 
 For the "Photosynthesis" topic, store a scripted conversation in `lib/demo-responses.ts`: Pip's replies to the 6 most likely teacher messages, a finished evaluation JSON (5 understood, 1 shaky, 1 gap on "Calvin cycle") and a finished mini-lesson. Use these when `DEMO_MODE=true` or when the API call fails.

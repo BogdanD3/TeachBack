@@ -16,6 +16,9 @@ check /community/no-such-thread 404
 check /teach/no-such-topic 404
 check /report/no-such-session 404
 check /lesson/no-such-gap 404
+check /library/no-such-topic/learn 404
+check "/library/no-such-topic/learn?depth=full" 404
 check /library/photosynthesis 200
+check /library/photosynthesis/learn 200
 check /community 200
 exit $fail

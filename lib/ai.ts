@@ -1,10 +1,22 @@
 // The single place that talks to Gemini. Server-only.
 import type { Content } from "@google/genai";
-import { evaluationSchema, lessonSchema, type ChatTurn, type Evaluation, type LessonContent, type PipResult, type TopicContext } from "./ai-types";
+import {
+  evaluationSchema,
+  lessonSchema,
+  primerSchema,
+  type ChatTurn,
+  type Evaluation,
+  type LessonContent,
+  type PipResult,
+  type PrimerContent,
+  type PrimerDepth,
+  type TopicContext,
+} from "./ai-types";
+import { demoPrimer } from "./demo-primers";
 import { demoEvaluation, demoLesson, demoPipReply } from "./demo-responses";
 import { aiEnv, type ThinkingSetting } from "./env";
 import { AiUnavailableError, generate, generateStream } from "./gemini";
-import { evaluationPrompt, lessonPrompt, pipSystemPrompt } from "./prompts";
+import { evaluationPrompt, lessonPrompt, pipSystemPrompt, primerPrompt } from "./prompts";
 
 export class AiFormatError extends Error {
   constructor() {
@@ -165,6 +177,32 @@ export async function evaluateSession(topic: TopicContext, history: ChatTurn[]):
     if (e instanceof AiFormatError) throw e;
     console.info(`[ai] evaluation served from demo mode (${e instanceof Error ? e.message : "error"})`);
     return { ...demoEvaluation(topic, history), source: "demo" };
+  }
+}
+
+/** Primer for a topic. Every topic concept appears once, in topic order (missing ones are filled from the description). */
+export async function generatePrimer(topic: TopicContext, depth: PrimerDepth): Promise<PrimerContent & { source: "gemini" | "demo" }> {
+  const names = topic.concepts.map((c) => c.name);
+  try {
+    const primer = await generateJson(
+      primerPrompt(topic.title, topic.concepts, depth),
+      (raw) => {
+        const p = primerSchema.safeParse(raw);
+        if (!p.success) return null;
+        const byName = new Map(p.data.concepts.map((c) => [normalizeCovered([c.name], names)[0], c]));
+        if (byName.size < Math.ceil(names.length / 2)) return null; // mostly wrong names → retry
+        const concepts = topic.concepts.map(
+          (c) => ({ ...(byName.get(c.name) ?? { explanation: c.description, example: "", hint: c.description, deeper: "", mistake: "" }), name: c.name }),
+        );
+        return { ...p.data, concepts };
+      },
+      `primer-${depth}`,
+    );
+    return { ...primer, source: "gemini" };
+  } catch (e) {
+    if (e instanceof AiFormatError) throw e;
+    console.info(`[ai] primer served from demo mode (${e instanceof Error ? e.message : "error"})`);
+    return { ...demoPrimer(topic, depth), source: "demo" };
   }
 }
 

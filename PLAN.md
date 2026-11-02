@@ -12,13 +12,13 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ## Phase 0 — Project setup
 
-- [ ] Set up Next.js (latest, App Router, TypeScript strict, Tailwind, ESLint) **in the current folder**. The folder is not empty (kit files, `.venv`, `.claude`), so `create-next-app .` will refuse: either set it up by hand (`npm init`, install `next react react-dom`, `typescript`, Tailwind + PostCSS, ESLint config, `tsconfig.json`, `next.config.ts`, `app/layout.tsx`, `app/page.tsx`), or scaffold into `./_scaffold` and move the files up without overwriting any existing file. Never touch `.env`, `.venv`, `.claude` or the kit `.md` files.
-- [ ] Install: `@google/genai prisma @prisma/client zod bcryptjs lucide-react framer-motion` (+ dev: `@types/bcryptjs tsx`)
-- [ ] Create the folder structure from CLAUDE.md
-- [ ] `.env.example` already exists: keep it in sync if you add variables (never read or edit `.env`)
-- [ ] Check `.gitignore` covers `.env`, `.venv/`, `*.db`, `node_modules`, `.next`, `.claude/settings.local.json`
-- [ ] Add npm scripts: `db:migrate`, `db:seed`, `db:reset`, `demo:reset` (placeholder until phase 9)
-- [ ] If `.env` is missing, stop and tell the user to create it from `.env.example`
+- [x] Set up Next.js (latest, App Router, TypeScript strict, Tailwind, ESLint) **in the current folder**. The folder is not empty (kit files, `.venv`, `.claude`), so `create-next-app .` will refuse: either set it up by hand (`npm init`, install `next react react-dom`, `typescript`, Tailwind + PostCSS, ESLint config, `tsconfig.json`, `next.config.ts`, `app/layout.tsx`, `app/page.tsx`), or scaffold into `./_scaffold` and move the files up without overwriting any existing file. Never touch `.env`, `.venv`, `.claude` or the kit `.md` files.
+- [x] Install: `@google/genai prisma @prisma/client zod bcryptjs lucide-react framer-motion` (+ dev: `@types/bcryptjs tsx`)
+- [x] Create the folder structure from CLAUDE.md
+- [x] `.env.example` already exists: keep it in sync if you add variables (never read or edit `.env`)
+- [x] Check `.gitignore` covers `.env`, `.venv/`, `*.db`, `node_modules`, `.next`, `.claude/settings.local.json`
+- [x] Add npm scripts: `db:migrate`, `db:seed`, `db:reset`, `demo:reset` (placeholder until phase 9)
+- [x] If `.env` is missing, stop and tell the user to create it from `.env.example`
 
 **Done when:** `npm run dev` shows the default page, `npm run build` passes.
 
@@ -162,4 +162,9 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 Add one line per decision: date · decision · reason.
 
--
+- 2026-11-02 · Next.js 16 set up by hand (no create-next-app) · folder already had kit files.
+- 2026-11-02 · Prisma pinned to 6.19 (not 7/8-rc) · v6 loads `.env` automatically and needs no driver adapter, matching CLAUDE.md; `latest` on npm is an rc.
+- 2026-11-02 · Tailwind v4: tokens mapped with `@theme` in `globals.css` instead of `tailwind.config` · v4 is CSS-first; same effect.
+- 2026-11-02 · Tailwind `source(none)` + explicit `@source` for app/components/lib · auto-scan of the whole folder trips over `.claude`/`.venv`.
+- 2026-11-02 · npm 12 blocks install scripts: approved `prisma`, `@prisma/client`, `@prisma/engines`, `esbuild` (needed for engines and tsx); denied no-op/optional ones.
+- 2026-11-02 · Gemini models: main `gemini-3.6-flash`, fallback `gemini-3.5-flash` (code defaults) · gemini-2.5-flash no longer available to new keys.

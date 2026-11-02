@@ -1,0 +1,14 @@
+@import "tailwindcss" source(none);
+@source "../app";
+@source "../components";
+@source "../lib";
+
+:root {
+  --paper: #fbf7f0;
+  --ink: #1e2a3a;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+}

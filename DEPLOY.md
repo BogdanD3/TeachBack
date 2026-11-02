@@ -1,26 +1,41 @@
-# DEPLOY.md — Teachback on your own server (PM2 + Nginx + certbot)
+# DEPLOY.md — Teachback on a fresh Linux server
 
-Tested target: a small Ubuntu/Debian VPS (1 vCPU, 1 GB RAM is enough). SQLite lives on the server's disk, so no database service is needed.
+Target: a small Ubuntu 24.04 / Debian 12 VPS (1 vCPU, 1 GB RAM is enough). SQLite lives on the server's disk, so there is no database service. Stack: Node.js LTS → `next start` under **PM2** on `127.0.0.1:3000` → **Nginx** reverse proxy → **certbot** for HTTPS.
 
-## 1. Prerequisites (once)
+Commands marked `sudo` run as root; everything else runs as a normal deploy user (below: `deploy`, home `/home/deploy`).
+
+## 1. Server basics (once)
 
 ```bash
-sudo apt update && sudo apt install -y git nginx certbot python3-certbot-nginx
-# Node.js LTS (22+). With nvm, as your deploy user:
+# as root (or a sudo user)
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y git curl nginx certbot python3-certbot-nginx sqlite3 ufw
+sudo adduser --disabled-password --gecos "" deploy      # skip if you already have a user
+sudo ufw allow OpenSSH && sudo ufw allow 'Nginx Full' && sudo ufw --force enable
+```
+
+`sqlite3` is optional but lets `scripts/backup-db.sh` take consistent backups while the app is running.
+
+Point a DNS `A` record (e.g. `teachback.yourdomain.com`) at the server's IP now; certbot needs it in step 6.
+
+## 2. Node.js LTS and PM2 (as `deploy`)
+
+```bash
+sudo -iu deploy
 curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-source ~/.bashrc && nvm install --lts
+source ~/.bashrc
+nvm install --lts && nvm alias default 'lts/*'
+node -v                      # v22+ / v24+
 npm install -g pm2
 ```
 
-Point a DNS `A` record (e.g. `teachback.yourdomain.com`) at the server before step 5.
-
-## 2. Clone, configure, build
+## 3. Clone and configure
 
 ```bash
 git clone <your-repo-url> ~/teachback && cd ~/teachback
-npm ci                       # package.json "allowScripts" lets Prisma + esbuild run their install scripts
 cp .env.example .env
-nano .env                    # fill in the values below
+chmod 600 .env
+nano .env
 ```
 
 `.env` on the server:
@@ -29,40 +44,54 @@ nano .env                    # fill in the values below
 GEMINI_API_KEY=<your key>
 GEMINI_MODEL=gemini-3.6-flash
 GEMINI_FALLBACK_MODEL=gemini-3.5-flash
+PIP_THINKING=low
 DEMO_MODE=false
 SESSION_SECRET=<output of: openssl rand -hex 32>
 DATABASE_URL="file:./dev.db"
 ```
 
-`SESSION_SECRET` is required in production: without it the server exits at startup with `[startup] SESSION_SECRET is not set`.
+The server **refuses to start** in production (PM2 shows `errored`, the log line starts with `[startup]`) when:
+- `SESSION_SECRET` is missing or shorter than 32 characters (`openssl rand -hex 32` gives 64),
+- `DEMO_MODE` is not set to `true` or `false` (demo mode must be a deliberate choice).
+
+`PIP_THINKING` (`off` | `low` | `medium`, default `low`) sets how long Pip thinks before answering; `low` is the speed/quality sweet spot.
+
+## 4. First install
 
 ```bash
-npm run db:deploy            # apply migrations (creates prisma/dev.db)
-npm run db:seed              # realistic demo data + demo account demo@teachback.app / demo1234
+cd ~/teachback
+npm ci                       # package.json "allowScripts" lets Prisma + esbuild run their install scripts
+npm run db:deploy            # creates prisma/dev.db and applies all migrations
+npm run db:seed              # ONCE on a new server: topics, demo data, demo@teachback.app / demo1234
 npm run build                # prisma generate + next build
-npm run ai:check             # optional: confirms which Gemini model answers
+npm run ai:check             # optional: which Gemini model answers, and Pip's streaming speed
 ```
 
-## 3. Run with PM2
+Never run `db:seed` or `demo:reset` on a server with real users: both wipe the data. Updates (section 7) never seed.
+
+## 5. Run with PM2
 
 ```bash
 mkdir -p logs
-pm2 start ecosystem.config.js     # runs `next start` on 127.0.0.1:3000, one instance
+pm2 start ecosystem.config.js     # `next start` on 127.0.0.1:3000, one instance, NODE_ENV=production
 pm2 save
-pm2 startup                       # prints a sudo command — run it so PM2 starts on boot
-pm2 logs teachback                # watch logs (shows "[ai] … answered by <model>")
+pm2 startup                       # prints a `sudo env PATH=… pm2 startup …` line: run it, so PM2 starts on boot
+curl -s http://127.0.0.1:3000/api/health   # {"ok":true,"db":true,"ai":"configured"}
+pm2 logs teachback                # "[ai] pip streamed by <model>: first text … ms" etc.
 ```
 
-Keep **one** instance: rate limits are in memory and SQLite prefers a single writer.
+Keep **one** instance: rate limits live in memory and SQLite prefers a single writer.
 
-## 4. Nginx reverse proxy
+## 6. Nginx and HTTPS
 
-`/etc/nginx/sites-available/teachback`:
+`sudo nano /etc/nginx/sites-available/teachback`:
 
 ```nginx
 server {
     listen 80;
     server_name teachback.yourdomain.com;
+
+    client_max_body_size 5m;            # voice recordings (≤ 60 s) are uploaded to /api/transcribe
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -72,49 +101,86 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host $host;
+        proxy_read_timeout 60s;
+    }
+
+    # Pip's replies stream word by word: don't buffer them.
+    location /api/teach/ {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_buffering off;
+        proxy_read_timeout 120s;
     }
 }
 ```
 
 ```bash
 sudo ln -s /etc/nginx/sites-available/teachback /etc/nginx/sites-enabled/teachback
+sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d teachback.yourdomain.com     # adds the 443 server + HTTP→HTTPS redirect
+sudo certbot renew --dry-run                         # renewal runs automatically (systemd timer)
+curl -s https://teachback.yourdomain.com/api/health
 ```
 
-The `X-Real-IP` / `X-Forwarded-For` headers matter for BotLens: without them every visitor looks like `127.0.0.1`. `X-Forwarded-Host/Proto` make referral links and Open Graph URLs use your public domain.
+Why the headers matter:
+- `X-Real-IP` / `X-Forwarded-For`: BotLens and the rate limits see the visitor's IP, not `127.0.0.1`.
+- `X-Forwarded-Host` / `X-Forwarded-Proto`: referral links and Open Graph URLs use your public `https://` domain.
+- HTTPS is required for the microphone (browsers block it on plain HTTP) and for the session cookie, which is `Secure` in production.
+- The streaming route also sends `X-Accel-Buffering: no`; the `proxy_buffering off` block makes it explicit.
 
-## 5. HTTPS
+## 7. Updating
 
 ```bash
-sudo certbot --nginx -d teachback.yourdomain.com
+cd ~/teachback && bash scripts/deploy.sh
 ```
 
-The microphone (voice input) only works over HTTPS. Session cookies are `Secure` in production.
+`scripts/deploy.sh` does, in order: backup the database (`scripts/backup-db.sh`) → `git pull --ff-only` → `npm ci` → `npm run db:deploy` (migrations only) → `npm run build` → `pm2 startOrRestart ecosystem.config.js --update-env` → `pm2 save` → waits for `/api/health`. It **never seeds or resets**. If the health check fails it prints where to look (`pm2 logs teachback --lines 50`).
 
-## 6. Updating
+After changing `.env` only: `pm2 restart teachback --update-env`.
+
+## 8. Backups
+
+`scripts/backup-db.sh` copies `prisma/dev.db` to `backups/dev-YYYY-MM-DD_HHMMSS.db` (using `sqlite3 .backup` when available, so it's safe while the app writes) and keeps the newest 14. `backups/` is git-ignored.
+
+Daily at 03:15, as `deploy` (`crontab -e`):
+
+```cron
+15 3 * * * cd /home/deploy/teachback && bash scripts/backup-db.sh >> logs/backup.log 2>&1
+```
+
+Restore: `pm2 stop teachback && cp backups/dev-<stamp>.db prisma/dev.db && pm2 start teachback`. Copy `backups/` off the server now and then (e.g. `scp` or `rsync` from your laptop).
+
+## 9. Uptime checks
+
+`GET /api/health` → `{"ok":true,"db":true,"ai":"configured"}` (HTTP 200), or `"db":false` with HTTP 503 when the database doesn't answer. `ai` is `"demo"` when `DEMO_MODE=true` or no key is set. No secrets or model names are exposed. Point UptimeRobot / Better Stack (or a cron `curl -fsS`) at `https://teachback.yourdomain.com/api/health`.
+
+## 10. Before the demo
 
 ```bash
 cd ~/teachback
-cp prisma/dev.db "prisma/dev.db.bak-$(date +%F-%H%M)"   # backup first
-git pull && npm ci && npm run db:deploy && npm run build && pm2 restart teachback
+bash scripts/backup-db.sh
+npm run demo:reset           # reseeds (wipes data!); the demo live event opens for booking 3 minutes later
+npm run ai:check             # if both models fail → set DEMO_MODE=true (below)
 ```
 
-## 7. Before the demo
+Then open `/library/photosynthesis/learn` once so the primer is generated and cached. Bad Wi-Fi or Gemini limits: set `DEMO_MODE=true` in `.env`, then `pm2 restart teachback --update-env`. The Photosynthesis demo is fully scripted in demo mode, and the app also falls back to demo answers on its own when both models fail. Click path: `DEMO.md`.
 
-```bash
-cp prisma/dev.db "prisma/dev.db.bak-$(date +%F-%H%M)"
-npm run demo:reset           # reseed; the demo live event opens for booking 3 minutes later
-npm run ai:check             # if both models fail → see below
-```
-
-Bad Wi-Fi or Gemini limits: set `DEMO_MODE=true` in `.env`, then `pm2 restart teachback --update-env`. The Photosynthesis demo is fully scripted in demo mode. The app also falls back to demo mode automatically when both models fail.
-
-## 8. Troubleshooting
+## 11. Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| PM2 shows `errored`, log says `SESSION_SECRET is not set` | Add it to `.env`, `pm2 restart teachback --update-env`. |
-| `502 Bad Gateway` | `pm2 status`; the app must listen on `127.0.0.1:3000`. |
-| Everyone's IP is `127.0.0.1` | The Nginx `proxy_set_header` lines are missing. |
+| PM2 shows `errored`, log has `[startup] …` | Fix the named `.env` setting (`SESSION_SECRET` ≥ 32 chars, `DEMO_MODE=true/false`), then `pm2 restart teachback --update-env`. |
+| `502 Bad Gateway` | `pm2 status`; the app must listen on `127.0.0.1:3000`. `pm2 logs teachback`. |
+| `/api/health` says `"db":false` | `ls -l prisma/dev.db`; run `npm run db:deploy`; check file permissions (owned by `deploy`). |
+| Pip's reply appears all at once | Nginx buffers it: check the `location /api/teach/` block with `proxy_buffering off`. |
+| Voice upload fails with 413 | `client_max_body_size 5m;` missing in the Nginx server block. |
+| Everyone's IP is `127.0.0.1` | The `proxy_set_header X-Real-IP / X-Forwarded-For` lines are missing. |
 | Mic button missing | The site isn't on HTTPS (browsers only allow the microphone on HTTPS or localhost), or the browser lacks MediaRecorder. |
-| Pip answers feel canned | `DEMO_MODE=true`, or the API failed — check `pm2 logs` for `[ai] … failed on …`. |
+| Login works but you're logged out immediately | You're on `http://`: the session cookie is `Secure`. Use the HTTPS URL. |
+| Pip answers feel canned | `DEMO_MODE=true`, or the API failed — `pm2 logs` shows `[ai] … failed on …`; `/api/health` shows `"ai":"demo"` when no key is set. |

@@ -216,11 +216,13 @@ Lint + build + e2e + commit after each numbered item. Never reseed `prisma/dev.d
 
    > Verified: `DEMO_OPENS_IN_MIN=2 E2E_PROD=1 bash scripts/e2e.sh demo.py` runs the new DEMO.md click path end to end (primer, message 1 via the mic, streamed replies, peek on light-dependent reactions, report with the Peeked badge, lesson, map → lesson, dashboard, live booking, leaderboard).
 7. Production readiness
-   - [ ] `GET /api/health` → `{ ok, db, ai }`
-   - [ ] `scripts/deploy.sh` (pull, ci, migrate deploy, build, pm2 restart; never seeds)
-   - [ ] `scripts/backup-db.sh` (timestamped copy, keep 14), `backups/` ignored, cron line in DEPLOY.md
-   - [ ] Secure cookies in production; `botlens_force` cookie off in production; refuse to start in production if `DEMO_MODE` unset or `SESSION_SECRET` < 32 chars
-   - [ ] DEPLOY.md: fresh-server walkthrough (Node LTS, PM2, Nginx + X-Forwarded headers, certbot) + update flow with `scripts/deploy.sh`
+   - [x] `GET /api/health` → `{ ok, db, ai }`
+   - [x] `scripts/deploy.sh` (pull, ci, migrate deploy, build, pm2 restart; never seeds)
+   - [x] `scripts/backup-db.sh` (timestamped copy, keep 14), `backups/` ignored, cron line in DEPLOY.md
+   - [x] Secure cookies in production; `botlens_force` cookie off in production; refuse to start in production if `DEMO_MODE` unset or `SESSION_SECRET` < 32 chars
+   - [x] DEPLOY.md: fresh-server walkthrough (Node LTS, PM2, Nginx + X-Forwarded headers, certbot) + update flow with `scripts/deploy.sh`
+
+   > Verified: `E2E_PROD=1 bash scripts/e2e.sh check-prod.sh auth.py check-404.sh` pass (refuses to start without DEMO_MODE / with a 16-char secret / without a secret, never printing it; health `{"ok":true,"db":true,"ai":"demo"}`; `tb_session` Secure + HttpOnly; `botlens_force=block` ignored in production). `backup-db.sh` tested on `prisma/e2e.db` with KEEP=2 (rotation, missing-DB case). `deploy.sh` syntax-checked only: PM2/Nginx/certbot need the real server — user to run.
 
 **Done when:** every item above is ticked, each committed separately, and the e2e suites pass.
 
@@ -320,5 +322,11 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · The transcript is appended to whatever is already typed and focused, never sent automatically · the user checks it first (brief). A BotLens challenge on transcription resends the same recording after "I'm human".
 - 2026-11-02 · DEMO.md: peek after message 3, so the hint is about the light-dependent reactions that message 4 explains; message 1 can be dictated (the demo transcript equals message 1). Warm-up step added: open the primer once after `demo:reset` (the reseed clears the primer cache).
 - 2026-11-02 · Peek's word matching ignores common words ("where", "what", "comes"…) · "Is that where everything happens?" matched "Where the oxygen comes from".
+- 2026-11-02 · (user) Production refuses to start when `SESSION_SECRET` is missing or < 32 chars, or `DEMO_MODE` isn't `true`/`false` (`productionConfigProblems()` in lib/env.ts, run from instrumentation.ts; each problem logged as `[startup] …`, exit 1). e2e production runs set `DEMO_MODE=true` and a 37-char throwaway secret.
+- 2026-11-02 · Secure cookies: `tb_session` was already `Secure` in production and is the only cookie the app sets; the `botlens_force` hook was already production-off · both now covered by `scripts/check-prod.sh`.
+- 2026-11-02 · `GET /api/health` → 200 `{ok, db, ai}` or 503 when `SELECT 1` fails; `ai` is `demo` when DEMO_MODE=true or no key · no model names or secrets. Not BotLens-guarded (uptime monitors must reach it).
+- 2026-11-02 · `scripts/deploy.sh` also backs up the DB first and waits for `/api/health`; uses `pm2 startOrRestart ecosystem.config.js --update-env` so a first deploy works too · never seeds/resets.
+- 2026-11-02 · `scripts/backup-db.sh` uses `sqlite3 .backup` when installed (consistent while the app writes), else `cp`; keeps the newest 14 (`KEEP`), `DB_FILE`/`BACKUP_DIR` overridable; daily 03:15 cron in DEPLOY.md.
+- 2026-11-02 · Nginx: `client_max_body_size 5m` (voice uploads; the default 1 MB is too tight for 60 s of Safari AAC) and a `location /api/teach/` block with `proxy_buffering off` for streaming (the route also sends `X-Accel-Buffering: no`).
 - 2026-11-02 · Chat placeholder shortened to "Explain it to Pip…" · the old text wrapped inside the 48px input at 375px.
 - 2026-11-02 · Gap report and lesson waits show `ProgressSteps`: Pip thinking + status lines that tick every 2.6 s and stop on the last one · the work is one server call, so the lines are paced, not real progress events.

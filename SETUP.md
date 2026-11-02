@@ -31,8 +31,9 @@ Fill in `.env`:
 GEMINI_API_KEY=your_key_here
 GEMINI_MODEL=gemini-3.6-flash
 GEMINI_FALLBACK_MODEL=gemini-3.5-flash
+PIP_THINKING=low
 DEMO_MODE=false
-SESSION_SECRET=any-long-random-string
+SESSION_SECRET=at-least-32-random-characters   # openssl rand -hex 32
 DATABASE_URL="file:./dev.db"
 ```
 
@@ -101,6 +102,8 @@ Do the design tokens and base components together on day 1, so both halves look 
 | 7 | Deploy to your own server, rehearse demo, record backup video |
 
 ## 8. Deploying to your own server
+
+**The current, complete steps are in `DEPLOY.md`** (fresh server, Nginx with streaming, certbot, `scripts/deploy.sh` for updates, daily backups, `/api/health`). The short version below is the original kit outline.
 
 SQLite works fine here, because the database file stays on your server's disk.
 

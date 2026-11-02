@@ -23,7 +23,8 @@ done
 server="npx next dev -p $PORT"
 if [[ "${E2E_PROD:-}" == "1" ]]; then
   # Production build + `next start`. A throwaway secret is fine for this local test server only.
-  export SESSION_SECRET="${SESSION_SECRET:-e2e-local-only-not-a-real-secret}"
+  # Production refuses to start without DEMO_MODE and a ≥ 32-char secret.
+  export SESSION_SECRET="${SESSION_SECRET:-e2e-local-only-not-a-real-secret-0000}" DEMO_MODE="${DEMO_MODE:-true}"
   npx next build 2>&1 | grep -E "✓ Compiled|rror" || true
   server="npx next start -p $PORT"
 fi

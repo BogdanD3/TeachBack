@@ -31,6 +31,9 @@ screenshots/
 # pm2 logs
 logs/
 
+# database backups (scripts/backup-db.sh)
+backups/
+
 # misc
 .DS_Store
 npm-debug.log*

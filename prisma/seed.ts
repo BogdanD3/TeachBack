@@ -1,5 +1,6 @@
 import { PrismaClient, type Concept, type Topic, type User } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { demoLesson } from "../lib/demo-responses";
 import { threads, reviewTexts } from "./seed-data/community";
 import { liveEvents } from "./seed-data/events";
 import { people, emailDomains } from "./seed-data/people";
@@ -179,6 +180,17 @@ async function main() {
   for (const [slug, d] of [["water-cycle", 3], ["supply-and-demand", 2], ["recursion", 1]] as const) demoPts += await finishedSession(demo.id, slug, d);
   await db.pointEvent.create({ data: { userId: demo.id, amount: POINTS_GAP_CLOSED, reason: "gap_closed", createdAt: inThisMonth() } });
   await db.user.update({ where: { id: demo.id }, data: { points: demoPts + POINTS_GAP_CLOSED } });
+  // One earlier lesson so "Your lessons" on the dashboard isn't empty (written after the states, so it counts as current).
+  const weakState = await db.conceptState.findFirst({
+    where: { userId: demo.id, state: { in: ["gap", "shaky"] } },
+    include: { concept: { include: { topic: { include: { concepts: { orderBy: { order: "asc" } } } } } } },
+    orderBy: { updatedAt: "asc" },
+  });
+  if (weakState) {
+    const t = weakState.concept.topic;
+    const content = demoLesson({ slug: t.slug, title: t.title, concepts: t.concepts }, weakState.concept.name, weakState.feedback);
+    await db.lesson.create({ data: { conceptStateId: weakState.id, conceptId: weakState.conceptId, userId: demo.id, content: JSON.stringify(content) } });
+  }
 
   // ---- Live events + bookings
   // `npm run demo:reset` sets DEMO_OPENS_IN_MIN=3 so booking opens on stage; a plain seed uses 5.

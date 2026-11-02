@@ -201,9 +201,11 @@ Lint + build + e2e + commit after each numbered item. Never reseed `prisma/dev.d
 
    > Verified: `E2E_PROD=1 bash scripts/e2e.sh primer.py learning.py check-404.sh check-ssr.sh` pass (start options, quick/full primer, peek costs 5 then free, peek moves on after a concept is covered, report marks 2 peeked concepts; `/library/<bad>/learn` is a real 404; primer text is in the server HTML). Screens checked at 375 and 1280 (`debug_primer.py`).
 4. Lessons reachable everywhere
-   - [ ] Map: shaky/gap concept → "Fix this gap" button to its lesson
-   - [ ] Dashboard: "Your lessons" section; weakest concepts link to their lessons
-   - [ ] Topic page lists the user's lessons for that topic
+   - [x] Map: shaky/gap concept → "Fix this gap" button to its lesson
+   - [x] Dashboard: "Your lessons" section; weakest concepts link to their lessons
+   - [x] Topic page lists the user's lessons for that topic
+
+   > Verified: `E2E_PROD=1 bash scripts/e2e.sh lessons.py learning.py` pass; screens checked at 375.
 5. Voice in every browser
    - [ ] MediaRecorder + `POST /api/transcribe` (Gemini main → fallback, demo transcript), text goes into the input for review; max 60 s; `checkRequest(req, "ai_message")`
    - [ ] Mic shown wherever MediaRecorder + getUserMedia exist; speechSynthesis kept for Pip's voice
@@ -306,5 +308,8 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Peek picks the uncovered concept whose name shares the most words with Pip's last message, else the first uncovered one in topic order · cheap guess at "the concept Pip is asking about" without an AI call.
 - 2026-11-02 · Peek costs 5 points once per concept per session (re-peeking is free), recorded as a negative `PointEvent` (`reason: peek`); points never go below 0 · new users with 0 points can still peek. No BotLens check on peek · it only costs the user points and isn't on the action list.
 - 2026-11-02 · Gap report shows a neutral "Peeked" badge per concept plus a one-line summary; the evaluation prompt is unchanged · the AI grades what was explained, the badge tells the user they had help.
+- 2026-11-02 · Map modal says "Fix this gap" for both shaky and gap concepts (was "Firm this up" for shaky), with a meta line "Your lesson is ready" once a lesson exists; understood concepts with a lesson get "Review your lesson" · matches the brief; the gap report keeps "Firm this up" for shaky.
+- 2026-11-02 · Dashboard "Your lessons" shows the 4 newest lessons; weakest concepts got an explicit "Fix this gap →" cue · they already linked to their lesson. Topic pages list all of the user's lessons for that topic (hidden when there are none).
+- 2026-11-02 · Seed gives the demo account one lesson (demo content on its oldest weak concept) · the dashboard section isn't empty on stage.
 - 2026-11-02 · Chat placeholder shortened to "Explain it to Pip…" · the old text wrapped inside the 48px input at 375px.
 - 2026-11-02 · Gap report and lesson waits show `ProgressSteps`: Pip thinking + status lines that tick every 2.6 s and stop on the last one · the work is one server call, so the lines are paced, not real progress events.

@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { DifficultyDots } from "@/components/library/DifficultyDots";
 import { ReviewForm } from "@/components/library/ReviewForm";
 import { ReviewList } from "@/components/library/ReviewList";
+import { LessonList } from "@/components/lesson/LessonList";
+import { userLessons } from "@/lib/lessons";
 import { timeAgo } from "@/lib/format";
 import { Pip } from "@/components/teach/Pip";
 import { ButtonLink } from "@/components/ui/ButtonLink";
@@ -26,9 +28,10 @@ export default async function TopicPage({ params }: Params) {
   const topic = await findTopic(slug);
   if (!topic) notFound();
   const user = await getCurrentUser();
-  const [states, reviews] = await Promise.all([
+  const [states, reviews, lessons] = await Promise.all([
     userConceptStates(user?.id, topic.concepts.map((c) => c.id)),
     db.review.findMany({ where: { topicId: topic.id }, include: { user: { select: { name: true } } }, orderBy: { createdAt: "desc" } }),
+    user ? userLessons(user.id, { topicId: topic.id, take: 20 }) : Promise.resolve([]),
   ]);
   const myReview = user ? reviews.find((r) => r.userId === user.id) : undefined;
 
@@ -68,6 +71,18 @@ export default async function TopicPage({ params }: Params) {
               })}
             </ol>
           </section>
+
+          {lessons.length > 0 && (
+            <section className="mt-12" aria-labelledby="my-lessons-h">
+              <h2 id="my-lessons-h" className="t-h2">
+                Your lessons
+              </h2>
+              <p className="mt-2 text-ink-2">Lessons written for your gaps in {topic.title}.</p>
+              <div className="mt-6">
+                <LessonList lessons={lessons} showTopic={false} />
+              </div>
+            </section>
+          )}
 
           <ReviewList
             topicSlug={topic.slug}

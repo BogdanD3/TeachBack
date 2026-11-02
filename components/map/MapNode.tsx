@@ -13,6 +13,7 @@ export type MapConcept = {
   evidence?: string;
   feedback?: string;
   updated?: string;
+  hasLesson?: boolean;
   topicSlug: string;
 };
 
@@ -58,8 +59,16 @@ export function MapNode({ c }: { c: MapConcept }) {
         )}
         <div className="mt-6 flex flex-col gap-2">
           {c.stateId && c.state !== "understood" && c.state !== "neutral" && (
-            <ButtonLink href={`/lesson/${c.stateId}`} fullWidth data-action="fix_gap">
-              {c.state === "gap" ? "Fix this gap" : "Firm this up"}
+            <>
+              <ButtonLink href={`/lesson/${c.stateId}`} fullWidth data-action="fix_gap">
+                Fix this gap
+              </ButtonLink>
+              <p className="t-meta text-center text-ink-2">{c.hasLesson ? "Your lesson is ready" : "A 2-minute lesson for this concept"}</p>
+            </>
+          )}
+          {c.stateId && c.state === "understood" && c.hasLesson && (
+            <ButtonLink href={`/lesson/${c.stateId}`} variant="secondary" fullWidth data-action="open_lesson">
+              Review your lesson
             </ButtonLink>
           )}
           <ButtonLink href={`/teach/${c.topicSlug}?new=1`} variant="secondary" fullWidth>

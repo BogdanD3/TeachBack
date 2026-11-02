@@ -1,6 +1,7 @@
 import { CalendarClock, Flame, Sparkles, Timer } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LessonList } from "@/components/lesson/LessonList";
 import { Pip } from "@/components/teach/Pip";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Card } from "@/components/ui/Card";
@@ -8,17 +9,19 @@ import { Pill, type ConceptStateName } from "@/components/ui/Pill";
 import { requireUser, trialDaysLeft } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatDateTime, plural, timeAgo } from "@/lib/format";
+import { userLessons } from "@/lib/lessons";
 
 export const metadata: Metadata = { title: "Dashboard" };
 
 export default async function DashboardPage() {
   const user = await requireUser("/dashboard");
   const now = new Date();
-  const [active, lastDone, weak, events] = await Promise.all([
+  const [active, lastDone, weak, events, lessons] = await Promise.all([
     db.teachSession.findFirst({ where: { userId: user.id, status: "active" }, include: { topic: true, _count: { select: { messages: true } } }, orderBy: { startedAt: "desc" } }),
     db.teachSession.findFirst({ where: { userId: user.id, status: "finished" }, include: { topic: { include: { _count: { select: { concepts: true } } } } }, orderBy: { finishedAt: "desc" } }),
     db.conceptState.findMany({ where: { userId: user.id, state: { in: ["gap", "shaky"] } }, include: { concept: { include: { topic: true } } }, orderBy: { updatedAt: "desc" }, take: 12 }),
     db.liveEvent.findMany({ where: { startsAt: { gt: now } }, orderBy: { startsAt: "asc" }, take: 3, include: { _count: { select: { bookings: true } } } }),
+    userLessons(user.id, { take: 4 }),
   ]);
   const weakest = [...weak].sort((a, b) => (a.state === b.state ? 0 : a.state === "gap" ? -1 : 1)).slice(0, 5);
   const days = trialDaysLeft(user);
@@ -72,12 +75,16 @@ export default async function DashboardPage() {
           ) : (
             <ul className="mt-4 space-y-3">
               {weakest.map((w) => (
-                <li key={w.id} className="flex items-center justify-between gap-3">
-                  <Link href={`/lesson/${w.id}`} className="group block min-h-11 min-w-0 py-1">
-                    <span className="block truncate font-medium underline-offset-4 group-hover:underline">{w.concept.name}</span>
-                    <span className="block truncate text-xs text-ink-2">{w.concept.topic.title}</span>
+                <li key={w.id}>
+                  <Link href={`/lesson/${w.id}`} className="group flex min-h-11 items-center justify-between gap-3 py-1" data-action="fix_gap">
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium underline-offset-4 group-hover:underline">{w.concept.name}</span>
+                      <span className="block truncate text-xs text-ink-2">
+                        {w.concept.topic.title} · <span className="font-medium text-coral-dark">{w.state === "gap" ? "Fix this gap" : "Firm this up"} →</span>
+                      </span>
+                    </span>
+                    <Pill state={w.state as ConceptStateName} className="shrink-0" />
                   </Link>
-                  <Pill state={w.state as ConceptStateName} className="shrink-0" />
                 </li>
               ))}
             </ul>
@@ -85,6 +92,20 @@ export default async function DashboardPage() {
           <ButtonLink href="/map" variant="ghost" className="mt-4">Open your map</ButtonLink>
         </Card>
       </div>
+
+      <section className="mt-12" aria-labelledby="lessons-h">
+        <div className="flex items-baseline justify-between gap-4">
+          <h2 id="lessons-h" className="t-h2">Your lessons</h2>
+          <ButtonLink href="/map" variant="ghost">All on your map</ButtonLink>
+        </div>
+        {lessons.length === 0 ? (
+          <p className="mt-4 text-ink-2">No lessons yet. After a session, tap &ldquo;Fix this gap&rdquo; on the report and the lesson shows up here.</p>
+        ) : (
+          <div className="mt-6">
+            <LessonList lessons={lessons} />
+          </div>
+        )}
+      </section>
 
       <section className="mt-12" aria-labelledby="upcoming-h">
         <div className="flex items-baseline justify-between gap-4">

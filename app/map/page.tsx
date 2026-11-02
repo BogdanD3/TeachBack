@@ -13,7 +13,7 @@ export const metadata: Metadata = { title: "Understanding Map" };
 
 export default async function MapPage() {
   const user = await requireUser("/map");
-  const states = await db.conceptState.findMany({ where: { userId: user.id }, include: { concept: true } });
+  const states = await db.conceptState.findMany({ where: { userId: user.id }, include: { concept: true, lesson: { select: { id: true } } } });
   const byConcept = new Map(states.map((s) => [s.conceptId, s]));
   const topicIds = [...new Set(states.map((s) => s.concept.topicId))];
   const topics = await db.topic.findMany({ where: { id: { in: topicIds } }, include: { concepts: { orderBy: { order: "asc" } } }, orderBy: { title: "asc" } });
@@ -49,7 +49,7 @@ export default async function MapPage() {
             const nodes: MapConcept[] = t.concepts.map((c) => {
               const s = byConcept.get(c.id);
               return s
-                ? { name: c.name, state: s.state as ConceptStateName, stateId: s.id, evidence: s.evidence, feedback: s.feedback, updated: formatDate(s.updatedAt), topicSlug: t.slug }
+                ? { name: c.name, state: s.state as ConceptStateName, stateId: s.id, evidence: s.evidence, feedback: s.feedback, updated: formatDate(s.updatedAt), hasLesson: Boolean(s.lesson), topicSlug: t.slug }
                 : { name: c.name, state: "neutral", topicSlug: t.slug };
             });
             const solid = nodes.filter((n) => n.state === "understood").length;

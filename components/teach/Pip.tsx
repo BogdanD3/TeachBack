@@ -10,6 +10,8 @@ type Props = {
   className?: string;
   /** Hide from screen readers when the surrounding text already says who is speaking. */
   decorative?: boolean;
+  /** false renders Pip still (used for older chat bubbles). */
+  animated?: boolean;
 };
 
 const labels: Record<PipState, string> = {
@@ -36,8 +38,8 @@ const mouths: Record<PipState, string> = {
   "got-it": "M51 72 Q60 84 69 72",
 };
 
-export function Pip({ state = "idle", size = 120, className, decorative = false }: Props) {
-  const reduce = useReducedMotion();
+export function Pip({ state = "idle", size = 120, className, decorative = false, animated = true }: Props) {
+  const reduce = useReducedMotion() || !animated;
   const m = bodyMotion[state];
   const eyeY = state === "thinking" ? 54 : 58;
 

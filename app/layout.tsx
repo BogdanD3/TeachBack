@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import { BotLensGate } from "@/components/BotLensGate";
+import { ChromeGate } from "@/components/layout/ChromeGate";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
 import { SiteHeader } from "@/components/layout/SiteHeader";
@@ -35,9 +36,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
            ============================================================ */}
       </head>
       <body className="min-h-dvh bg-paper text-ink">
-        <SiteHeader user={user ? { name: user.name, plan: user.plan } : null} />
+        <ChromeGate>
+          <SiteHeader user={user ? { name: user.name, plan: user.plan } : null} />
+        </ChromeGate>
         <main id="main">{children}</main>
-        <SiteFooter />
+        <ChromeGate>
+          <SiteFooter />
+        </ChromeGate>
         <BotLensGate />
       </body>
     </html>

@@ -93,16 +93,20 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ## Phase 5 — Core learning flow (most important)
 
-- [ ] **Topic library** `/library`: grid of topic cards, filter by subject, search, difficulty
-- [ ] **Topic detail** `/library/[slug]`: summary, concept list (with user's states if logged in), reviews, "Teach this to Pip" button
-- [ ] **Teach session** `/teach/[topicId]`: creates a TeachSession; Pip's fixed opening message; chat UI from DESIGN.md; Pip state changes (thinking while waiting, confused when asking, got-it when a concept is covered); concept progress dots; "Finish session" button
-- [ ] **Voice**: mic button using the Web Speech API (speech-to-text into the input); toggle for Pip reading replies aloud with `speechSynthesis`; hide the mic gracefully if the browser doesn't support it
-- [ ] **Gap report** `/report/[sessionId]`: runs the evaluation once, saves ConceptStates, shows score ring, concept list with evidence quotes and feedback, "Fix this gap" buttons, Pip summary; awards points
-- [ ] **Mini-lesson** `/lesson/[conceptStateId]`: generates and caches the lesson; gap box, body, example, 2 check questions with instant feedback; "Teach Pip again" starts a new session on the same topic
-- [ ] **Understanding Map** `/map`: all concepts grouped by topic, colored nodes with labels, legend, tap for evidence and date
-- [ ] `/dashboard` after login: continue last session, weakest concepts, streak, upcoming live events
+- [x] **Topic library** `/library`: grid of topic cards, filter by subject, search, difficulty
+- [x] **Topic detail** `/library/[slug]`: summary, concept list (with user's states if logged in), reviews, "Teach this to Pip" button
+- [x] **Teach session** `/teach/[topicId]`: creates a TeachSession; Pip's fixed opening message; chat UI from DESIGN.md; Pip state changes (thinking while waiting, confused when asking, got-it when a concept is covered); concept progress dots; "Finish session" button
+- [x] **Voice**: mic button using the Web Speech API (speech-to-text into the input); toggle for Pip reading replies aloud with `speechSynthesis`; hide the mic gracefully if the browser doesn't support it
+- [x] **Gap report** `/report/[sessionId]`: runs the evaluation once, saves ConceptStates, shows score ring, concept list with evidence quotes and feedback, "Fix this gap" buttons, Pip summary; awards points
+- [x] **Mini-lesson** `/lesson/[conceptStateId]`: generates and caches the lesson; gap box, body, example, 2 check questions with instant feedback; "Teach Pip again" starts a new session on the same topic
+- [x] **Understanding Map** `/map`: all concepts grouped by topic, colored nodes with labels, legend, tap for evidence and date
+- [x] `/dashboard` after login: continue last session, weakest concepts, streak, upcoming live events
 
 **Done when:** with the demo account, the full loop works end to end in demo mode AND with the real API: library → teach → finish → report → lesson → teach again → map updates.
+
+- [x] Demo mode: `bash scripts/e2e.sh learning.py` passes at 375px and 1280px (`WIDTH=1280`).
+- [x] Real API: verified by user (run the same loop in the browser with `DEMO_MODE=false` and a key in `.env`).
+> Manual check for the user: voice input/output in a real browser with a microphone (headless tests can't).
 
 ---
 
@@ -200,3 +204,13 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Login has its own IP rate limit (20/min) besides BotLens · cheap brute-force brake.
 - 2026-11-02 · BotLens verdict UI (`BotLensGate` + `postJson`) built in phase 4 because every form uses it; ticked in phase 7.
 - 2026-11-02 · e2e checks live in `scripts/e2e/*.py`, run with `bash scripts/e2e.sh <script.py>` (dev server managed by the webapp-testing helper).
+- 2026-11-02 · (user) All file changes go through Claude's Edit/Write tools, never sed/awk/python/shell redirects.
+- 2026-11-02 · `/teach/[topicId]` accepts slug or id; it resumes the open session for that topic, `?new=1` closes it and starts fresh ("Teach Pip again") · reloads never lose the chat.
+- 2026-11-02 · Evaluation runs in `POST /api/teach/[id]/finish` (claims the session as `evaluating` first so double clicks can't evaluate twice); the report page only reads the stored result.
+- 2026-11-02 · Finish route checks both `ai_message` and `leaderboard_submit` with BotLens · it calls the AI and submits points.
+- 2026-11-02 · Gap report offers "Fix this gap" for gaps and "Firm this up" for shaky concepts · shaky ones benefit from a lesson too.
+- 2026-11-02 · Lessons are generated during the server render of `/lesson/[gapId]` (with a skeleton `loading.tsx`) and cached in `Lesson`; regenerated when the concept state changed after the lesson was written · lesson text is server-rendered for BotLens.
+- 2026-11-02 · Site header/footer hidden on `/teach/*` via `ChromeGate` · focused full-screen chat with a fixed input bar, no hidden focusable chrome.
+- 2026-11-02 · Map nodes and pills use strong state tints with ink text instead of solid fills · white on `--gap` is 4.4:1, under AA.
+- 2026-11-02 · Error messages use ink text with a `--gap` icon · `--gap` text on paper is ~4.1:1, under AA.
+- 2026-11-02 · `notFound()` on pages with `loading.tsx` returns HTTP 200 with the not-found UI · Next.js streaming behaviour; acceptable for the demo.

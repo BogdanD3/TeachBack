@@ -112,16 +112,18 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ## Phase 6 — Platform features (bot targets)
 
-- [ ] **Live** `/live`: list of live sessions and weekly challenges; countdown until booking opens; seat bar (DESIGN.md); "Book seat" enabled only when open; seats update every 2 seconds; one booking per user; sold-out state
-- [ ] **Leaderboard** `/leaderboard`: monthly ranking by points, streaks, prize banner, current user highlighted
-- [ ] **Community** `/community`: thread list with topic tags, thread page with replies, new thread and reply forms (logged in only)
-- [ ] **Reviews**: star rating + text on topic detail page (logged in, one per user per topic)
-- [ ] **Pricing** `/pricing`: Free, Pro (€9/month), Team; Pro highlighted
-- [ ] **Checkout** `/checkout?plan=pro`: promo code field (validates code, shows discount), fake card form with validation (no real payments, show a "Demo — no real payment" note), creates an Order, upgrades the plan, success page
-- [ ] **Referral** `/referral`: personal link with copy button, list of invited friends, "1 free week per friend" reward
-- [ ] **Profile** `/profile`: name, plan, trial days left, stats
+- [x] **Live** `/live`: list of live sessions and weekly challenges; countdown until booking opens; seat bar (DESIGN.md); "Book seat" enabled only when open; seats update every 2 seconds; one booking per user; sold-out state
+- [x] **Leaderboard** `/leaderboard`: monthly ranking by points, streaks, prize banner, current user highlighted
+- [x] **Community** `/community`: thread list with topic tags, thread page with replies, new thread and reply forms (logged in only)
+- [x] **Reviews**: star rating + text on topic detail page (logged in, one per user per topic)
+- [x] **Pricing** `/pricing`: Free, Pro (€9/month), Team; Pro highlighted
+- [x] **Checkout** `/checkout?plan=pro`: promo code field (validates code, shows discount), fake card form with validation (no real payments, show a "Demo — no real payment" note), creates an Order, upgrades the plan, success page
+- [x] **Referral** `/referral`: personal link with copy button, list of invited friends, "1 free week per friend" reward
+- [x] **Profile** `/profile`: name, plan, trial days left, stats
 
 **Done when:** each feature works with the demo account and with a newly signed-up user.
+
+> Verified: `bash scripts/e2e.sh platform.py check-404.sh` (demo + new user, incl. live seat polling seen from a second browser).
 
 ---
 
@@ -213,4 +215,12 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Site header/footer hidden on `/teach/*` via `ChromeGate` · focused full-screen chat with a fixed input bar, no hidden focusable chrome.
 - 2026-11-02 · Map nodes and pills use strong state tints with ink text instead of solid fills · white on `--gap` is 4.4:1, under AA.
 - 2026-11-02 · Error messages use ink text with a `--gap` icon · `--gap` text on paper is ~4.1:1, under AA.
-- 2026-11-02 · `notFound()` on pages with `loading.tsx` returns HTTP 200 with the not-found UI · Next.js streaming behaviour; acceptable for the demo.
+- 2026-11-02 · (user, replaces the earlier "404 as 200 is acceptable" entry) Every not-found case must be a real HTTP 404 · BotLens counts 404s to detect path brute-forcing and scanners. Fix: list pages' `loading.tsx` moved into `(index)` route groups (`/library`, `/community`) so they don't wrap the detail routes; `/teach/[topicId]`, `/report/[sessionId]`, `/lesson/[gapId]` got a segment `layout.tsx` that checks existence (and ownership when logged in) before the page's loading boundary streams. Verified with `bash scripts/check-404.sh` (curl status per bad slug).
+- 2026-11-02 · e2e runs are isolated: own build dir `.next-e2e` (`NEXT_DIST_DIR`), port 3100 and database `prisma/e2e.db` (migrated + seeded per run) · a second `next dev` in the same folder was refused while the user's own dev server ran; tests must never reseed the user's `prisma/dev.db`.
+- 2026-11-02 · Seeded point events fall inside the current month · the leaderboard is monthly and would be nearly empty early in a month.
+- 2026-11-02 · Team plan priced at €29/month for up to 5 people · DESIGN/CLAUDE only fix Pro at €9.
+- 2026-11-02 · Booking inserts first, then re-counts and rolls back if over capacity · safe last-seat race without SQLite row locks. Promo uses are incremented with a `uses < maxUses` guard for the same reason.
+- 2026-11-02 · Promo check and login have their own IP rate limits (15/min, 20/min) besides BotLens · cheap protection against code guessing / brute force.
+- 2026-11-02 · Referral claim extends the trial (or restarts one from Free) by 1 week per unclaimed friend and gives 20 points; Pro/Team users bank the days as `bonusDays`.
+- 2026-11-02 · Fake checkout: Luhn + future expiry + 3–4 digit CVC; only the last 4 digits are stored · realistic validation, no card data kept.
+- 2026-11-02 · Community also shows the latest topic reviews (DESIGN: "review cards with stars") · reviews are written on topic pages.

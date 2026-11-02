@@ -5,7 +5,7 @@ import { timeAgo } from "@/lib/format";
 
 type Review = { id: string; stars: number; text: string; createdAt: Date; user: { name: string } };
 
-type Props = { topicId: string; topicSlug: string; reviews: Review[]; canReview: boolean; loggedIn: boolean; form?: React.ReactNode };
+type Props = { topicSlug: string; reviews: Review[]; loggedIn: boolean; form?: React.ReactNode };
 
 export function ReviewList({ topicSlug, reviews, loggedIn, form }: Props) {
   return (

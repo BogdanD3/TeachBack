@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { DifficultyDots } from "@/components/library/DifficultyDots";
+import { ReviewForm } from "@/components/library/ReviewForm";
 import { ReviewList } from "@/components/library/ReviewList";
+import { timeAgo } from "@/lib/format";
 import { Pip } from "@/components/teach/Pip";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { Pill, type ConceptStateName } from "@/components/ui/Pill";
@@ -67,7 +69,18 @@ export default async function TopicPage({ params }: Params) {
             </ol>
           </section>
 
-          <ReviewList topicId={topic.id} topicSlug={topic.slug} reviews={reviews} canReview={Boolean(user) && !myReview} loggedIn={Boolean(user)} />
+          <ReviewList
+            topicSlug={topic.slug}
+            reviews={reviews}
+            loggedIn={Boolean(user)}
+            form={
+              user && !myReview ? (
+                <ReviewForm topicSlug={topic.slug} />
+              ) : myReview ? (
+                <p className="mt-4 text-sm text-ink-2">Thanks — you reviewed this topic {timeAgo(myReview.createdAt)}.</p>
+              ) : null
+            }
+          />
         </article>
 
         <aside className="lg:sticky lg:top-24 lg:self-start">

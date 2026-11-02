@@ -22,6 +22,7 @@ model User {
   lastActiveAt DateTime?
   referralCode String    @unique
   referredById String?
+  referralClaimed Boolean @default(false) // referrer already claimed the free week for this user
   referredBy   User?     @relation("Referrals", fields: [referredById], references: [id])
   referrals    User[]    @relation("Referrals")
   createdAt    DateTime  @default(now())

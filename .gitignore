@@ -12,6 +12,7 @@ __pycache__/
 # node / next
 node_modules/
 .next/
+.next-e2e/
 out/
 build/
 *.tsbuildinfo

@@ -18,6 +18,13 @@ function rand(): number {
 }
 const pick = <T,>(arr: T[]): T => arr[Math.floor(rand() * arr.length)];
 const ago = (days: number) => new Date(Date.now() - days * DAY);
+/** A random moment between the start of this month and now (keeps the monthly leaderboard full). */
+function inThisMonth(): Date {
+  const now = Date.now();
+  const d = new Date();
+  const start = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  return new Date(start + rand() * (now - start - 60_000));
+}
 
 function referralCode(name: string, i: number): string {
   return (name.split(" ")[0].normalize("NFD").replace(/[^A-Za-z]/g, "").toUpperCase().slice(0, 5) + (100 + i * 7)).slice(0, 8);
@@ -105,8 +112,10 @@ async function main() {
   }
   // A few referrals so the referral page has data for Amara (users[0]).
   for (const u of [users[8], users[16], users[22]]) {
-    await db.user.update({ where: { id: u.id }, data: { referredById: users[0].id } });
+    await db.user.update({ where: { id: u.id }, data: { referredById: users[0].id, referralClaimed: true } });
   }
+  // The demo account has one friend whose free week is still waiting to be claimed.
+  await db.user.update({ where: { id: users[11].id }, data: { referredById: demo.id } });
   await db.user.update({ where: { id: users[0].id }, data: { bonusDays: 21 } });
 
   // ---- Finished teach sessions + concept states (others + demo user)
@@ -147,7 +156,7 @@ async function main() {
         update: {},
       });
     }
-    await db.pointEvent.create({ data: { userId, amount: POINTS_SESSION, reason: "session_finished", createdAt: s.finishedAt! } });
+    await db.pointEvent.create({ data: { userId, amount: POINTS_SESSION, reason: "session_finished", createdAt: inThisMonth() } });
     return POINTS_SESSION;
   }
 
@@ -159,7 +168,7 @@ async function main() {
     for (let k = 0; k < n; k++) pts += await finishedSession(u.id, pick(slugs), rand() * 25);
     const gaps = Math.floor(rand() * 6);
     for (let g = 0; g < gaps; g++) {
-      await db.pointEvent.create({ data: { userId: u.id, amount: POINTS_GAP_CLOSED, reason: "gap_closed", createdAt: ago(rand() * 20) } });
+      await db.pointEvent.create({ data: { userId: u.id, amount: POINTS_GAP_CLOSED, reason: "gap_closed", createdAt: inThisMonth() } });
       pts += POINTS_GAP_CLOSED;
     }
     await db.user.update({ where: { id: u.id }, data: { points: pts + Math.floor(rand() * 400) } });
@@ -167,7 +176,7 @@ async function main() {
   // Demo user: three topics done, Photosynthesis left fresh for the stage demo.
   let demoPts = 0;
   for (const [slug, d] of [["water-cycle", 3], ["supply-and-demand", 2], ["recursion", 1]] as const) demoPts += await finishedSession(demo.id, slug, d);
-  await db.pointEvent.create({ data: { userId: demo.id, amount: POINTS_GAP_CLOSED, reason: "gap_closed", createdAt: ago(1) } });
+  await db.pointEvent.create({ data: { userId: demo.id, amount: POINTS_GAP_CLOSED, reason: "gap_closed", createdAt: inThisMonth() } });
   await db.user.update({ where: { id: demo.id }, data: { points: demoPts + POINTS_GAP_CLOSED } });
 
   // ---- Live events + bookings

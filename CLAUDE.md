@@ -53,7 +53,7 @@ prisma/schema.prisma, prisma/seed.ts
 
 Build in this order. Never start a lower item while a higher one is broken.
 
-1. **Teach session** (`/teach/[topicId]`) — chat with Pip. Text input plus optional voice (browser Web Speech API for speech-to-text, `speechSynthesis` for Pip's voice). Shows a progress bar of concepts covered. "Finish session" button.
+1. **Teach session** (`/teach/[topicId]`) — chat with Pip. Text input plus optional voice (MediaRecorder in the browser + Gemini transcription via `/api/transcribe` for speech-to-text, `speechSynthesis` for Pip's voice). Pip's replies stream in word by word. Shows a progress bar of concepts covered. "Finish session" button.
 2. **Gap report** (`/report/[sessionId]`) — after a session, AI evaluates the transcript and returns each concept as `understood`, `shaky` or `gap`, with a quote from the user as evidence.
 3. **Mini-lesson** (`/lesson/[gapId]`) — short lesson (max ~300 words) + 2 check questions for one gap. "Teach Pip again" button returns to the session.
 4. **Understanding Map** (`/map`) — all concepts the user touched, colored by state. Grouped by topic.

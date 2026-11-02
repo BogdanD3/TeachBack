@@ -16,7 +16,7 @@ import { demoPrimer } from "./demo-primers";
 import { demoEvaluation, demoLesson, demoPipReply } from "./demo-responses";
 import { aiEnv, type ThinkingSetting } from "./env";
 import { AiUnavailableError, generate, generateStream } from "./gemini";
-import { evaluationPrompt, lessonPrompt, pipSystemPrompt, primerPrompt } from "./prompts";
+import { evaluationPrompt, lessonPrompt, pipSystemPrompt, primerPrompt, transcribePrompt } from "./prompts";
 
 export class AiFormatError extends Error {
   constructor() {
@@ -203,6 +203,27 @@ export async function generatePrimer(topic: TopicContext, depth: PrimerDepth): P
     if (e instanceof AiFormatError) throw e;
     console.info(`[ai] primer served from demo mode (${e instanceof Error ? e.message : "error"})`);
     return { ...demoPrimer(topic, depth), source: "demo" };
+  }
+}
+
+/** Demo transcript: the first stage-demo message for Photosynthesis, the first concept's description otherwise. */
+const DEMO_TRANSCRIPT = "Photosynthesis is how plants make their own food. Chlorophyll, the green pigment in leaves, captures light energy.";
+
+/** Speech to text for the mic button. Main model → fallback → demo transcript. Minimal thinking: it's dictation. */
+export async function transcribeAudio(topic: TopicContext, audio: { base64: string; mimeType: string }): Promise<{ text: string; source: "gemini" | "demo" }> {
+  try {
+    const { text } = await generate(
+      {
+        contents: [{ role: "user", parts: [{ inlineData: { mimeType: audio.mimeType, data: audio.base64 } }, { text: transcribePrompt(topic.title) }] }],
+        temperature: 0,
+        thinking: "off",
+      },
+      "transcribe",
+    );
+    return { text: text.replace(/^"|"$/g, "").trim(), source: "gemini" };
+  } catch (e) {
+    console.info(`[ai] transcript served from demo mode (${e instanceof Error ? e.message : "error"})`);
+    return { text: topic.slug === "photosynthesis" ? DEMO_TRANSCRIPT : (topic.concepts[0]?.description ?? ""), source: "demo" };
   }
 }
 

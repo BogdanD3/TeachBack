@@ -116,5 +116,5 @@ Bad Wi-Fi or Gemini limits: set `DEMO_MODE=true` in `.env`, then `pm2 restart te
 | PM2 shows `errored`, log says `SESSION_SECRET is not set` | Add it to `.env`, `pm2 restart teachback --update-env`. |
 | `502 Bad Gateway` | `pm2 status`; the app must listen on `127.0.0.1:3000`. |
 | Everyone's IP is `127.0.0.1` | The Nginx `proxy_set_header` lines are missing. |
-| Mic button missing | Browser doesn't support Web Speech (Firefox) or the site isn't on HTTPS. |
+| Mic button missing | The site isn't on HTTPS (browsers only allow the microphone on HTTPS or localhost), or the browser lacks MediaRecorder. |
 | Pip answers feel canned | `DEMO_MODE=true`, or the API failed — check `pm2 logs` for `[ai] … failed on …`. |

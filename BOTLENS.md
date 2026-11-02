@@ -30,6 +30,7 @@ All are `POST` with a JSON body (`Content-Type: application/json`). Session = HT
 | `signup` | `/api/auth/signup` | `{ name, email, password, ref?, next? }` | no | `#signup-form`, `[data-action="signup"]` |
 | `login` | `/api/auth/login` | `{ email, password, next? }` | no | `#login-form`, `[data-action="login"]` |
 | `ai_message` | `/api/teach/:sessionId/message` | `{ content }` | yes | `#teach-message-form`, `[data-action="ai_message"]` |
+| `ai_message` | `/api/transcribe` | multipart: `sessionId`, `audio` (webm/ogg/mp4, ≤ 60 s) | yes | `[data-action="voice_input"]` (mic button; Gemini transcribes the recording) |
 | `ai_message` + `leaderboard_submit` | `/api/teach/:sessionId/finish` | `{}` | yes | `[data-action="finish_session"]` (finishing calls the AI and awards leaderboard points) |
 | `book_seat` | `/api/live/:eventId/book` | `{}` | yes | `[data-action="book_seat"][data-event-id]` on `/live` |
 | `post_review` | `/api/reviews` | `{ topic, stars, text }` | yes | `#review-form`, `[data-action="post_review"]` |
@@ -39,7 +40,7 @@ All are `POST` with a JSON body (`Content-Type: application/json`). Session = HT
 | `checkout` | `/api/checkout` | `{ plan, promo?, cardName, cardNumber, cardExpiry, cardCvc }` | yes | `#checkout-form`, `[data-action="checkout"]` |
 | `referral_claim` | `/api/referral/claim` | `{}` | yes | `[data-action="referral_claim"]` on `/referral` |
 
-Unprotected but interesting to watch: `GET /api/live/seats` (polled every 2 s by `/live` — scalpers will hammer it), `POST /api/auth/logout`.
+Unprotected but interesting to watch: `GET /api/live/seats` (polled every 2 s by `/live` — scalpers will hammer it), `POST /api/auth/logout`, `POST /api/teach/:sessionId/peek` (costs the user points, no AI), `GET /api/health` (uptime checks). The message route answers with a streamed `application/x-ndjson` body on success; its error responses are the usual JSON. Primers (`/library/:slug/learn`, `?depth=full`) are server-rendered content pages, like topics and lessons.
 
 Form `id`/`name` attributes and `data-action` values are stable. Don't expect random ids.
 

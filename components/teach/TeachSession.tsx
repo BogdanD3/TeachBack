@@ -194,7 +194,7 @@ export function TeachSession({ sessionId, topic, initialMessages, initialCovered
 
       <div className="border-t border-line bg-paper-2 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))]">
         <PeekBar sessionId={sessionId} disabled={sending || finishing} initialPeeks={initialPeeks} />
-        <ChatInput value={input} onChange={setInput} onSend={() => send(input)} disabled={sending || finishing} />
+        <ChatInput sessionId={sessionId} value={input} onChange={setInput} onSend={() => send(input)} disabled={sending || finishing} />
       </div>
 
       {finishing && (

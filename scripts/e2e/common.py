@@ -6,16 +6,17 @@ BASE = os.environ.get("BASE", "http://localhost:3000")
 OUT = os.environ.get("SHOTS", "screenshots")
 
 
-def launch(p):
+def launch(p, args=None):
     # System Chromium first (CLAUDE.md). Inside the Claude sandbox it aborts on a
     # socket restriction, so fall back to Playwright's cached headless shell.
+    args = args or []
     try:
-        return p.chromium.launch(executable_path="/usr/bin/chromium", headless=True)
+        return p.chromium.launch(executable_path="/usr/bin/chromium", headless=True, args=args)
     except Exception:
         shells = glob.glob(os.path.expanduser("~/.cache/ms-playwright/chromium_headless_shell-*/*/chrome-headless-shell"))
         if not shells:
-            return p.chromium.launch(headless=True)
-        return p.chromium.launch(executable_path=sorted(shells)[-1], headless=True)
+            return p.chromium.launch(headless=True, args=args)
+        return p.chromium.launch(executable_path=sorted(shells)[-1], headless=True, args=args)
 
 
 def check(cond, msg):

@@ -1,0 +1,30 @@
+// [name, email-local-part, referral code]
+export const people: [string, string][] = [
+  ["Amara Okafor", "amara.okafor"],
+  ["Jonas Lindqvist", "jonas.lindqvist"],
+  ["Priya Raman", "priya.raman"],
+  ["Mateo García", "mateo.garcia"],
+  ["Lena Fischer", "lena.fischer"],
+  ["Tomás Novák", "tomas.novak"],
+  ["Hana Suzuki", "hana.suzuki"],
+  ["Marco Bianchi", "marco.bianchi"],
+  ["Zoe Martin", "zoe.martin"],
+  ["Kwame Mensah", "kwame.mensah"],
+  ["Ines Duarte", "ines.duarte"],
+  ["Felix Wagner", "felix.wagner"],
+  ["Sofia Petrović", "sofia.petrovic"],
+  ["Daniel Cohen", "daniel.cohen"],
+  ["Aisha Rahman", "aisha.rahman"],
+  ["Lucas Moreau", "lucas.moreau"],
+  ["Maja Kowalska", "maja.kowalska"],
+  ["Ethan Brooks", "ethan.brooks"],
+  ["Nadia Haddad", "nadia.haddad"],
+  ["Oliver Hughes", "oliver.hughes"],
+  ["Elif Yılmaz", "elif.yilmaz"],
+  ["Ruben de Vries", "ruben.devries"],
+  ["Chloé Laurent", "chloe.laurent"],
+  ["Sam Okonkwo", "sam.okonkwo"],
+  ["Mira Jovanović", "mira.jovanovic"],
+];
+
+export const emailDomains = ["gmail.com", "outlook.com", "proton.me", "uni-wien.ac.at", "icloud.com"];

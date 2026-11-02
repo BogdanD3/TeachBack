@@ -41,7 +41,7 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ## Phase 2 — Database and seed data
 
-- [ ] Prisma schema with SQLite. Models (at least):
+- [x] Prisma schema with SQLite. Models (at least):
   - `User` (name, email, passwordHash, plan, trialEndsAt, points, streak, referralCode, referredById, createdAt)
   - `Session` (auth sessions: token, userId, expiresAt)
   - `Topic` (slug, title, subject, difficulty, summary, rating)
@@ -55,10 +55,12 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
   - `Thread`, `Reply` (forum), `Review` (topicId, userId, stars, text)
   - `PromoCode` (code, percentOff, maxUses, uses, expiresAt)
   - `Order` (userId, plan, amount, promoCodeId, status)
-- [ ] Seed script with realistic data: 12 topics from PROMPTS.md, each with 5–8 concepts; 25 users with real-sounding names; finished sessions and concept states for leaderboard/map; 4 live events (one with booking opening ~5 minutes after seeding, for the demo); 10 forum threads with replies; 30 reviews; 3 promo codes (`WELCOME20`, `STUDENT50`, `HACKATHON`)
-- [ ] Demo account: `demo@teachback.app` / `demo1234`
+- [x] Seed script with realistic data: 12 topics from PROMPTS.md, each with 5–8 concepts; 25 users with real-sounding names; finished sessions and concept states for leaderboard/map; 4 live events (one with booking opening ~5 minutes after seeding, for the demo); 10 forum threads with replies; 30 reviews; 3 promo codes (`WELCOME20`, `STUDENT50`, `HACKATHON`)
+- [x] Demo account: `demo@teachback.app` / `demo1234`
 
 **Done when:** `npm run db:reset` creates and seeds the database without errors.
+
+> Verified: `db:migrate` + `db:seed` (run twice, idempotent). `db:reset` itself is blocked for AI agents by Prisma's consent guard — user to run once to confirm.
 
 ---
 
@@ -173,3 +175,14 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Tailwind default palette removed (`--color-*: initial`) · makes off-token colours impossible.
 - 2026-11-02 · Teach session renders as a full-screen layer over the site chrome · keeps one root layout while giving the chat a fixed input bar.
 - 2026-11-02 · Playwright: try `/usr/bin/chromium` first, fall back to Playwright's cached headless shell · system Chromium aborts inside the Claude sandbox (socket() not permitted).
+- 2026-11-02 · (user) The sandbox blocks every process from reading `.env`/`.env.*` · Prisma keeps `url = env("DATABASE_URL")`; every Prisma npm script sets `DATABASE_URL=${DATABASE_URL:-file:./dev.db}` (overridable). DB file: `prisma/dev.db`.
+- 2026-11-02 · Same `DATABASE_URL` default also on `dev`, `build`, `start` · the running app's Prisma client needs it too; a real env still overrides it.
+- 2026-11-02 · (user) `SESSION_SECRET` missing → fixed dev-only fallback with a warning in development; throws in production.
+- 2026-11-02 · (user) Missing `GEMINI_API_KEY` → demo mode (expected in Claude's sandboxed runs). Real-API checks in phases 3 and 5 are ticked as "verified by user"; `npm run ai:check` lets the user test models from their own terminal.
+- 2026-11-02 · (user) `.env.example` already updated by the user (gemini-3.6-flash, GEMINI_FALLBACK_MODEL=gemini-3.5-flash); Claude never reads or edits it.
+- 2026-11-02 · (user) Prefer single commands; multi-step checks live in `scripts/*.sh`, run with `bash scripts/<name>.sh`.
+- 2026-11-02 · Prisma seed runs via `node --import tsx` instead of the `tsx` CLI · the tsx CLI opens a Unix-socket IPC pipe that the sandbox blocks.
+- 2026-11-02 · `prisma migrate reset` is gated by Prisma's AI-agent consent check · Claude verifies with `db:seed` (which wipes its own tables); `demo:reset` will reseed without `migrate reset`.
+- 2026-11-02 · Points: 50 per finished session, 30 per gap closed; monthly leaderboard sums `PointEvent` rows in the current month.
+- 2026-11-02 · Seed adds 5 extra "learner" accounts so the sold-out event really has 30 bookings · only 25 named users exist.
+- 2026-11-02 · Demo account is "Jordan Ellis" with 3 finished topics; Photosynthesis left untouched for the stage demo.

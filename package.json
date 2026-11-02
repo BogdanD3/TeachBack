@@ -3,18 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
+    "dev": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} next dev",
+    "build": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma generate && DATABASE_URL=${DATABASE_URL:-file:./dev.db} next build",
+    "start": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "prisma db seed",
-    "db:reset": "prisma migrate reset --force",
-    "demo:reset": "echo \"demo:reset is added in phase 9\""
+    "db:generate": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma generate",
+    "db:migrate": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma migrate dev",
+    "db:deploy": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma migrate deploy",
+    "db:seed": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma db seed",
+    "db:reset": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma migrate reset --force",
+    "demo:reset": "echo \"demo:reset is added in phase 9\"",
+    "ai:check": "node --env-file-if-exists=.env --import tsx scripts/ai-check.ts"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "node --import tsx prisma/seed.ts"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",

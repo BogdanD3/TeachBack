@@ -1,0 +1,241 @@
+// Teachback data model. SQLite file lives at prisma/dev.db (DATABASE_URL="file:./dev.db").
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  plan         String    @default("trial") // free | trial | pro | team
+  trialEndsAt  DateTime?
+  bonusDays    Int       @default(0) // free weeks earned via referrals
+  points       Int       @default(0)
+  streak       Int       @default(0)
+  lastActiveAt DateTime?
+  referralCode String    @unique
+  referredById String?
+  referredBy   User?     @relation("Referrals", fields: [referredById], references: [id])
+  referrals    User[]    @relation("Referrals")
+  createdAt    DateTime  @default(now())
+
+  sessions      Session[]
+  teachSessions TeachSession[]
+  conceptStates ConceptState[]
+  lessons       Lesson[]
+  bookings      Booking[]
+  threads       Thread[]
+  replies       Reply[]
+  reviews       Review[]
+  orders        Order[]
+  pointEvents   PointEvent[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  subject     String
+  difficulty  Int // 1-3
+  summary     String
+  intro       String // longer server-rendered description
+  rating      Float    @default(0)
+  ratingCount Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  concepts      Concept[]
+  teachSessions TeachSession[]
+  reviews       Review[]
+  threads       Thread[]
+  liveEvents    LiveEvent[]
+}
+
+model Concept {
+  id          String @id @default(cuid())
+  topicId     String
+  topic       Topic  @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  name        String
+  description String
+  order       Int
+
+  states  ConceptState[]
+  lessons Lesson[]
+
+  @@unique([topicId, name])
+}
+
+model TeachSession {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topicId    String
+  topic      Topic     @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  status     String    @default("active") // active | finished
+  covered    String    @default("") // pipe-separated concept names Pip reported as covered
+  score      Int?
+  pipSummary String?
+  evaluation String? // JSON of the evaluation result
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  messages Message[]
+  states   ConceptState[]
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  teachSessionId String
+  teachSession   TeachSession @relation(fields: [teachSessionId], references: [id], onDelete: Cascade)
+  role           String // teacher | pip
+  content        String
+  confused       Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+}
+
+model ConceptState {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conceptId      String
+  concept        Concept       @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  teachSessionId String?
+  teachSession   TeachSession? @relation(fields: [teachSessionId], references: [id], onDelete: SetNull)
+  state          String // understood | shaky | gap
+  evidence       String        @default("")
+  feedback       String        @default("")
+  updatedAt      DateTime      @updatedAt
+
+  lesson Lesson?
+
+  @@unique([userId, conceptId])
+}
+
+model Lesson {
+  id             String       @id @default(cuid())
+  conceptStateId String       @unique
+  conceptState   ConceptState @relation(fields: [conceptStateId], references: [id], onDelete: Cascade)
+  conceptId      String
+  concept        Concept      @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  content        String // JSON lesson
+  createdAt      DateTime     @default(now())
+}
+
+model LiveEvent {
+  id             String   @id @default(cuid())
+  slug           String   @unique
+  title          String
+  type           String // session | challenge
+  host           String
+  hostRole       String
+  description    String
+  topicId        String?
+  topic          Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  startsAt       DateTime
+  bookingOpensAt DateTime
+  durationMin    Int      @default(45)
+  seatsTotal     Int      @default(30)
+  prize          String?
+
+  bookings Booking[]
+}
+
+model Booking {
+  id        String    @id @default(cuid())
+  eventId   String
+  event     LiveEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+
+  @@unique([eventId, userId])
+}
+
+model Thread {
+  id        String   @id @default(cuid())
+  title     String
+  body      String
+  topicId   String?
+  topic     Topic?   @relation(fields: [topicId], references: [id], onDelete: SetNull)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  replies Reply[]
+}
+
+model Reply {
+  id        String   @id @default(cuid())
+  threadId  String
+  thread    Thread   @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  topicId   String
+  topic     Topic    @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stars     Int
+  text      String
+  createdAt DateTime @default(now())
+
+  @@unique([topicId, userId])
+}
+
+model PromoCode {
+  id          String    @id @default(cuid())
+  code        String    @unique
+  description String
+  percentOff  Int
+  maxUses     Int
+  uses        Int       @default(0)
+  expiresAt   DateTime?
+
+  orders Order[]
+}
+
+model Order {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan        String
+  amountCents Int
+  promoCodeId String?
+  promoCode   PromoCode? @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  cardLast4   String
+  status      String     @default("paid") // paid (simulated)
+  createdAt   DateTime   @default(now())
+}
+
+model PointEvent {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount    Int
+  reason    String // session_finished | gap_closed | referral
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}

@@ -1,0 +1,34 @@
+# secrets
+.env
+.env*.local
+
+# python
+.venv/
+__pycache__/
+
+# claude personal settings
+.claude/settings.local.json
+
+# node / next
+node_modules/
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# database
+*.db
+*.db-journal
+prisma/dev.db*
+
+# testing output
+test-results/
+playwright-report/
+screenshots/
+
+# misc
+.DS_Store
+npm-debug.log*
+_scaffold/
+.claude/.cc-writes/

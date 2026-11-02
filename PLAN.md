@@ -146,15 +146,17 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ## Phase 8 — Landing page and polish
 
-- [ ] Landing page `/` exactly as described in DESIGN.md (hero with Pip + sample chat, how it works, gap report preview, why teaching works, live teaser with countdown, pricing teaser, demo testimonials, footer)
-- [ ] Page titles, meta descriptions, Open Graph image, favicon (Pip)
-- [ ] 404 and error pages in brand style
-- [ ] Loading skeletons and empty states on every page
-- [ ] Full mobile pass at 375px: no horizontal scroll, tap targets ≥ 44px
-- [ ] Accessibility pass: labels, focus, contrast, keyboard navigation in the chat
-- [ ] Remove any leftover placeholder text
+- [x] Landing page `/` exactly as described in DESIGN.md (hero with Pip + sample chat, how it works, gap report preview, why teaching works, live teaser with countdown, pricing teaser, demo testimonials, footer)
+- [x] Page titles, meta descriptions, Open Graph image, favicon (Pip)
+- [x] 404 and error pages in brand style
+- [x] Loading skeletons and empty states on every page
+- [x] Full mobile pass at 375px: no horizontal scroll, tap targets ≥ 44px
+- [x] Accessibility pass: labels, focus, contrast, keyboard navigation in the chat
+- [x] Remove any leftover placeholder text
 
 **Done when:** every page passes the DESIGN.md checklist.
+
+> Verified: `bash scripts/e2e.sh a11y.py check-404.sh` (15 pages at 375px: no overflow, no targets < 44px except inline text links, every control labelled; Tab + Enter in the chat) and screenshots at 375/1280.
 
 ---
 
@@ -228,4 +230,8 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · BotLens test hooks: `BOTLENS_FORCE=block|challenge` env (all actions) and, outside production only, a `botlens_force=<verdict>[@a+b]` cookie for per-action forcing · lets one e2e run check every action's UI without editing code.
 - 2026-11-02 · BotLens challenge modal has an empty `#botlens-challenge-slot` for their widget and an "I'm human, try again" button that replays the original request.
 - 2026-11-02 · e2e scripts warm up routes first · the dev server's first compile of a route can reload the page mid-test.
+- 2026-11-02 · Landing "demo" section is a static render of the real gap report in a browser frame, with a commented slot for a video · no recording exists yet; DESIGN asks for a screenshot.
+- 2026-11-02 · Landing live teaser shows the next event whose booking hasn't opened (falls back to the next upcoming one) · that's the one with a countdown.
+- 2026-11-02 · Every page with a `loading.tsx` that can 404 gets an existence-check layout; `/checkout` form and skeleton moved into `(form)` so `/checkout/success` keeps real 404s.
+- 2026-11-02 · Tap-target rule: ≥ 44px for every control except inline links inside running text (WCAG 2.5.5 exception); checked by `scripts/e2e/a11y.py`.
 - 2026-11-02 · Community also shows the latest topic reviews (DESIGN: "review cards with stars") · reviews are written on topic pages.

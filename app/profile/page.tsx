@@ -83,7 +83,7 @@ export default async function ProfilePage() {
       )}
 
       <form action="/api/auth/logout" method="post" id="logout-form-profile" name="logout-form-profile" className="mt-12">
-        <button type="submit" data-action="logout" className="text-sm font-semibold text-coral-dark underline-offset-4 hover:underline">Log out</button>
+        <button type="submit" data-action="logout" className="inline-flex min-h-11 items-center text-sm font-semibold text-coral-dark underline-offset-4 hover:underline">Log out</button>
       </form>
     </div>
   );

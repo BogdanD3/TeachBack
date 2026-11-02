@@ -57,7 +57,7 @@ export default async function MapPage() {
               <section key={t.id} aria-labelledby={`map-${t.slug}`} className="rounded-card border border-line bg-white p-6">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h2 id={`map-${t.slug}`} className="t-h3">
-                    <Link href={`/library/${t.slug}`} className="underline-offset-4 hover:underline">
+                    <Link href={`/library/${t.slug}`} className="inline-flex min-h-11 items-center underline-offset-4 hover:underline">
                       {t.title}
                     </Link>
                   </h2>

@@ -41,7 +41,7 @@ export function ReviewForm({ topicSlug }: { topicSlug: string }) {
         <legend className="mb-2 text-sm font-semibold">Your rating</legend>
         <div className="flex gap-1" onMouseLeave={() => setHover(0)}>
           {[1, 2, 3, 4, 5].map((n) => (
-            <label key={n} className="cursor-pointer rounded-full p-1.5 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink" onMouseEnter={() => setHover(n)}>
+            <label key={n} className="cursor-pointer rounded-full p-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ink" onMouseEnter={() => setHover(n)}>
               <input type="radio" name="stars" value={n} checked={stars === n} onChange={() => setStars(n)} className="sr-only" />
               <Star className={`size-7 ${n <= shown ? "fill-shaky text-shaky" : "text-ink-2/50"}`} aria-hidden />
               <span className="sr-only">{n} {n === 1 ? "star" : "stars"}</span>

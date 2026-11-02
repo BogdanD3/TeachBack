@@ -73,10 +73,10 @@ export default async function DashboardPage() {
             <ul className="mt-4 space-y-3">
               {weakest.map((w) => (
                 <li key={w.id} className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <Link href={`/lesson/${w.id}`} className="block truncate font-medium underline-offset-4 hover:underline">{w.concept.name}</Link>
-                    <p className="truncate text-xs text-ink-2">{w.concept.topic.title}</p>
-                  </div>
+                  <Link href={`/lesson/${w.id}`} className="group block min-h-11 min-w-0 py-1">
+                    <span className="block truncate font-medium underline-offset-4 group-hover:underline">{w.concept.name}</span>
+                    <span className="block truncate text-xs text-ink-2">{w.concept.topic.title}</span>
+                  </Link>
                   <Pill state={w.state as ConceptStateName} className="shrink-0" />
                 </li>
               ))}

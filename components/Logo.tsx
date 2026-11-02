@@ -15,7 +15,7 @@ export function LogoMark({ size = 28 }: { size?: number }) {
 
 export function Logo({ href = "/" }: { href?: string }) {
   return (
-    <Link href={href} className="inline-flex items-center gap-2 rounded-full py-1 pr-1" aria-label="Teachback home">
+    <Link href={href} className="inline-flex h-11 items-center gap-2 rounded-full pr-1" aria-label="Teachback home">
       <LogoMark />
       <span className="font-display text-[22px] font-semibold leading-none tracking-tight text-ink">teachback</span>
     </Link>

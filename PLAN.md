@@ -162,14 +162,18 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ## Phase 9 — Deployment and demo readiness
 
-- [ ] `npm run build` and `npm start` work locally in production mode
-- [ ] Write `DEPLOY.md` following SETUP.md section 8 (PM2 + Nginx + certbot) with the exact commands for this project
-- [ ] `ecosystem.config.js` for PM2
-- [ ] Script `npm run demo:reset` that reseeds the database and sets the demo live event to open 3 minutes from now
-- [ ] Write `DEMO.md`: the exact click path for the stage demo, using the demo account and the Photosynthesis topic, with demo-mode fallback
-- [ ] Final check of the whole site with webapp-testing
+- [x] `npm run build` and `npm start` work locally in production mode
+- [x] Write `DEPLOY.md` following SETUP.md section 8 (PM2 + Nginx + certbot) with the exact commands for this project
+- [x] `ecosystem.config.js` for PM2
+- [x] Script `npm run demo:reset` that reseeds the database and sets the demo live event to open 3 minutes from now
+- [x] Write `DEMO.md`: the exact click path for the stage demo, using the demo account and the Photosynthesis topic, with demo-mode fallback
+- [x] Final check of the whole site with webapp-testing
 
 **Done when:** a fresh clone can be deployed by following DEPLOY.md, and DEMO.md runs start to finish.
+
+> Verified: fresh `git clone` → `npm ci` → `db:deploy` → `db:seed` → `build` → `npm start` serves all pages (real 404s, demo login). PM2/Nginx/certbot steps need a real server — user to run.
+> Verified: `DEMO_OPENS_IN_MIN=1 E2E_PROD=1 bash scripts/e2e.sh demo.py` runs the DEMO.md click path end to end (demo mode), incl. the countdown reaching 0 and booking.
+> Verified: `E2E_PROD=1 bash scripts/e2e.sh auth.py learning.py platform.py a11y.py check-404.sh check-ssr.sh` all pass on a production build; `botlens.py` passes on dev (its cookie hook is off in production by design).
 
 ---
 
@@ -234,4 +238,9 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Landing live teaser shows the next event whose booking hasn't opened (falls back to the next upcoming one) · that's the one with a countdown.
 - 2026-11-02 · Every page with a `loading.tsx` that can 404 gets an existence-check layout; `/checkout` form and skeleton moved into `(form)` so `/checkout/success` keeps real 404s.
 - 2026-11-02 · Tap-target rule: ≥ 44px for every control except inline links inside running text (WCAG 2.5.5 exception); checked by `scripts/e2e/a11y.py`.
+- 2026-11-02 · Missing `SESSION_SECRET` in production: `instrumentation.ts` logs `[startup] …` and exits with code 1 · Next would otherwise keep running without serving pages; PM2 shows a clear crash.
+- 2026-11-02 · `metadataBase` comes from the request host (`X-Forwarded-Host/Proto` behind Nginx) · absolute OG URLs without a new env var (Claude can't edit `.env.example`).
+- 2026-11-02 · PM2 runs one `next start` instance on 127.0.0.1:3000 and takes `DATABASE_URL` etc. from `.env` · in-memory rate limits + SQLite single writer.
+- 2026-11-02 · `demo:reset` = `migrate deploy` + seed with `DEMO_OPENS_IN_MIN=3` (no `migrate reset`) · seed wipes its own tables; avoids Prisma's AI consent gate and works on the server.
+- 2026-11-02 · e2e scripts wait for streamed content, not `networkidle` · production client navigation finishes before the streamed page arrives.
 - 2026-11-02 · Community also shows the latest topic reviews (DESIGN: "review cards with stars") · reviews are written on topic pages.

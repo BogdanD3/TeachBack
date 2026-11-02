@@ -81,11 +81,11 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ## Phase 4 — Auth
 
-- [ ] Sign-up page (name, email, password) → creates user with 7-day trial, logs in
-- [ ] Login and logout; HTTP-only session cookie; passwords hashed with bcrypt
-- [ ] `getCurrentUser()` helper; protected pages redirect to login
-- [ ] Referral: `/signup?ref=CODE` links the new user to the referrer
-- [ ] All auth routes call `checkRequest()` from `lib/botlens.ts` (see CLAUDE.md)
+- [x] Sign-up page (name, email, password) → creates user with 7-day trial, logs in
+- [x] Login and logout; HTTP-only session cookie; passwords hashed with bcrypt
+- [x] `getCurrentUser()` helper; protected pages redirect to login
+- [x] Referral: `/signup?ref=CODE` links the new user to the referrer
+- [x] All auth routes call `checkRequest()` from `lib/botlens.ts` (see CLAUDE.md)
 
 **Done when:** you can sign up, log out, log in with the demo account, and protected pages redirect.
 
@@ -194,3 +194,9 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Bad JSON from the model (twice) raises `AiFormatError` → friendly error, not demo mode · CLAUDE.md: "retry once, then show a friendly error".
 - 2026-11-02 · Pip's fixed opening is not sent to Gemini (history must start with a user turn) · it's static text anyway.
 - 2026-11-02 · "Confused" Pip messages detected with a small regex on the reply · drives the yellow "?" tag and Pip's confused state without an extra AI call.
+- 2026-11-02 · Session cookie `tb_session` holds a random token; DB stores only its HMAC-SHA256 (keyed with SESSION_SECRET) · a leaked DB can't be replayed as sessions.
+- 2026-11-02 · `/signup?ref=CODE` redirects to `/auth/signup?ref=CODE` · project structure puts auth under `/auth`, PLAN uses the short link.
+- 2026-11-02 · Referral free week is granted when the referrer claims it on `/referral` (`referral_claim` action), not automatically on sign-up · gives BotLens a real claim endpoint to protect.
+- 2026-11-02 · Login has its own IP rate limit (20/min) besides BotLens · cheap brute-force brake.
+- 2026-11-02 · BotLens verdict UI (`BotLensGate` + `postJson`) built in phase 4 because every form uses it; ticked in phase 7.
+- 2026-11-02 · e2e checks live in `scripts/e2e/*.py`, run with `bash scripts/e2e.sh <script.py>` (dev server managed by the webapp-testing helper).

@@ -129,16 +129,18 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ## Phase 7 — BotLens integration points
 
-- [ ] `lib/botlens.ts` with `checkRequest(req, action)` returning `{ allow: true }` for now, and a typed result `{ allow, challenge?, reason? }`
-- [ ] Called at the start of every route for these actions: `login`, `signup`, `book_seat`, `apply_promo`, `checkout`, `post_forum`, `post_review`, `referral_claim`, `leaderboard_submit`, `ai_message`
-- [ ] 403 handling (blocked message) and 429 handling ("Please verify you're human" modal) in the frontend
-- [ ] Commented slot for the BotLens tracking script in `app/layout.tsx`
-- [ ] Stable `id`/`name` on all forms and `data-action` on important buttons
-- [ ] Topic and lesson text is server-rendered
-- [ ] Respect `X-Forwarded-For` / `X-Real-IP` when reading the client IP (we run behind Nginx)
-- [ ] Write `BOTLENS.md`: list of all actions, routes, request shapes and how to plug in
+- [x] `lib/botlens.ts` with `checkRequest(req, action)` returning `{ allow: true }` for now, and a typed result `{ allow, challenge?, reason? }`
+- [x] Called at the start of every route for these actions: `login`, `signup`, `book_seat`, `apply_promo`, `checkout`, `post_forum`, `post_review`, `referral_claim`, `leaderboard_submit`, `ai_message`
+- [x] 403 handling (blocked message) and 429 handling ("Please verify you're human" modal) in the frontend
+- [x] Commented slot for the BotLens tracking script in `app/layout.tsx`
+- [x] Stable `id`/`name` on all forms and `data-action` on important buttons
+- [x] Topic and lesson text is server-rendered
+- [x] Respect `X-Forwarded-For` / `X-Real-IP` when reading the client IP (we run behind Nginx)
+- [x] Write `BOTLENS.md`: list of all actions, routes, request shapes and how to plug in
 
 **Done when:** temporarily switching `checkRequest` to block shows the right UI on every protected action.
+
+> Verified: `bash scripts/e2e.sh botlens.py check-ssr.sh` — block and challenge modals on all 10 actions, raw 403/429 JSON, retry after "I'm human".
 
 ---
 
@@ -223,4 +225,7 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Promo check and login have their own IP rate limits (15/min, 20/min) besides BotLens · cheap protection against code guessing / brute force.
 - 2026-11-02 · Referral claim extends the trial (or restarts one from Free) by 1 week per unclaimed friend and gives 20 points; Pro/Team users bank the days as `bonusDays`.
 - 2026-11-02 · Fake checkout: Luhn + future expiry + 3–4 digit CVC; only the last 4 digits are stored · realistic validation, no card data kept.
+- 2026-11-02 · BotLens test hooks: `BOTLENS_FORCE=block|challenge` env (all actions) and, outside production only, a `botlens_force=<verdict>[@a+b]` cookie for per-action forcing · lets one e2e run check every action's UI without editing code.
+- 2026-11-02 · BotLens challenge modal has an empty `#botlens-challenge-slot` for their widget and an "I'm human, try again" button that replays the original request.
+- 2026-11-02 · e2e scripts warm up routes first · the dev server's first compile of a route can reload the page mid-test.
 - 2026-11-02 · Community also shows the latest topic reviews (DESIGN: "review cards with stars") · reviews are written on topic pages.

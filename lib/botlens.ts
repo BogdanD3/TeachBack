@@ -47,10 +47,27 @@ export async function checkRequest(req: Request, action: BotLensAction): Promise
   };
   void ctx; // BotLens: send ctx to your detector here and map the verdict to BotLensResult.
 
-  // Testing hook: BOTLENS_FORCE=block|challenge simulates a verdict for every action.
-  const force = process.env.BOTLENS_FORCE;
-  if (force === "block") return { allow: false, reason: "forced by BOTLENS_FORCE" };
-  if (force === "challenge") return { allow: true, challenge: true, reason: "forced by BOTLENS_FORCE" };
+  const forced = forcedVerdict(req, action);
+  if (forced === "block") return { allow: false, reason: "forced (test hook)" };
+  if (forced === "challenge") return { allow: true, challenge: true, reason: "forced (test hook)" };
 
   return { allow: true };
+}
+
+/**
+ * Test hooks (see BOTLENS.md):
+ * - BOTLENS_FORCE=block|challenge forces a verdict for every action (any environment).
+ * - Outside production, a `botlens_force` cookie like `challenge@signup+login` or `block` forces a
+ *   verdict per request, so e2e tests can check each action's UI in one run.
+ */
+function forcedVerdict(req: Request, action: BotLensAction): "block" | "challenge" | null {
+  const env = process.env.BOTLENS_FORCE;
+  if (env === "block" || env === "challenge") return env;
+  if (process.env.NODE_ENV === "production") return null;
+  const raw = req.headers.get("cookie")?.match(/(?:^|;\s*)botlens_force=([^;]+)/)?.[1];
+  if (!raw) return null;
+  const [verdict, actions] = decodeURIComponent(raw).split("@");
+  if (verdict !== "block" && verdict !== "challenge") return null;
+  if (actions && !actions.split("+").includes(action)) return null;
+  return verdict;
 }

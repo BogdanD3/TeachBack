@@ -13,7 +13,7 @@
     "db:deploy": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma migrate deploy",
     "db:seed": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma db seed",
     "db:reset": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma migrate reset --force",
-    "demo:reset": "echo \"demo:reset is added in phase 9\"",
+    "demo:reset": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma migrate deploy && DATABASE_URL=${DATABASE_URL:-file:./dev.db} DEMO_OPENS_IN_MIN=3 prisma db seed",
     "ai:check": "node --env-file-if-exists=.env --import tsx scripts/ai-check.ts"
   },
   "prisma": {

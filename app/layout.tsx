@@ -4,6 +4,7 @@ import { BotLensGate } from "@/components/BotLensGate";
 import { ChromeGate } from "@/components/layout/ChromeGate";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { getCurrentUser } from "@/lib/auth";
+import { requestOrigin } from "@/lib/origin";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import "./globals.css";
 
@@ -11,10 +12,15 @@ const fraunces = Fraunces({ subsets: ["latin"], weight: ["600"], variable: "--fo
 const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-inter", display: "swap" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], weight: ["500"], variable: "--font-jetbrains", display: "swap" });
 
-export const metadata: Metadata = {
-  title: { default: "Teachback — Learn it by teaching it", template: "%s · Teachback" },
-  description: "Explain it to Pip. Find out what you really understand.",
-};
+// metadataBase comes from the request host (behind Nginx: X-Forwarded-Host/Proto), so OG image URLs are absolute and correct.
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    metadataBase: new URL(await requestOrigin()),
+    title: { default: "Teachback — Learn it by teaching it", template: "%s · Teachback" },
+    description: "Explain it to Pip. Find out what you really understand.",
+    openGraph: { siteName: "Teachback", type: "website" },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#FBF7F0",

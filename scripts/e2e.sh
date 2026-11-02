@@ -2,6 +2,7 @@
 # Start an isolated dev server, run one or more checks, stop the server.
 #   bash scripts/e2e.sh auth.py
 #   bash scripts/e2e.sh learning.py "shots.py --login /library /map" check-404.sh
+#   E2E_PROD=1 bash scripts/e2e.sh learning.py      # against a production build (next start)
 # Isolation: own build dir (.next-e2e), own port (3100) and own database (prisma/e2e.db,
 # freshly migrated and seeded each run) — your `npm run dev` and prisma/dev.db are untouched.
 set -euo pipefail
@@ -19,6 +20,13 @@ for s in "$@"; do
   if [[ "$s" == *.sh ]]; then step="bash scripts/$s"; else step=".venv/bin/python scripts/e2e/$s"; fi
   cmd+="${cmd:+ && }$step"
 done
+server="npx next dev -p $PORT"
+if [[ "${E2E_PROD:-}" == "1" ]]; then
+  # Production build + `next start`. A throwaway secret is fine for this local test server only.
+  export SESSION_SECRET="${SESSION_SECRET:-e2e-local-only-not-a-real-secret}"
+  npx next build 2>&1 | grep -E "✓ Compiled|rror" || true
+  server="npx next start -p $PORT"
+fi
 .venv/bin/python .claude/skills/webapp-testing/scripts/with_server.py \
-  --server "npx next dev -p $PORT" --port "$PORT" --timeout 90 \
+  --server "$server" --port "$PORT" --timeout 90 \
   -- bash -c "$cmd"

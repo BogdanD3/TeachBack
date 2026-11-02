@@ -180,7 +180,9 @@ async function main() {
   await db.user.update({ where: { id: demo.id }, data: { points: demoPts + POINTS_GAP_CLOSED } });
 
   // ---- Live events + bookings
-  for (const e of liveEvents(now)) {
+  // `npm run demo:reset` sets DEMO_OPENS_IN_MIN=3 so booking opens on stage; a plain seed uses 5.
+  const opensIn = Number(process.env.DEMO_OPENS_IN_MIN) || 5;
+  for (const e of liveEvents(now, opensIn)) {
     const { prebooked, topic, ...data } = e;
     const ev = await db.liveEvent.create({ data: { ...data, topicId: bySlug.get(topic)?.id } });
     const bookers = users.slice(0, Math.min(prebooked, users.length));
@@ -233,6 +235,7 @@ async function main() {
 
   const counts = await Promise.all([db.topic.count(), db.concept.count(), db.user.count(), db.teachSession.count(), db.liveEvent.count(), db.thread.count(), db.review.count(), db.promoCode.count()]);
   console.log("Seeded topics=%d concepts=%d users=%d sessions=%d events=%d threads=%d reviews=%d promos=%d", ...counts);
+  console.log("Demo event booking opens at %s (in %d min). Demo login: demo@teachback.app / demo1234", new Date(now.getTime() + opensIn * 60_000).toLocaleTimeString(), opensIn);
 }
 
 main()

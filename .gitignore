@@ -28,6 +28,9 @@ test-results/
 playwright-report/
 screenshots/
 
+# pm2 logs
+logs/
+
 # misc
 .DS_Store
 npm-debug.log*

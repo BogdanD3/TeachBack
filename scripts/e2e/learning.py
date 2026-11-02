@@ -42,7 +42,7 @@ with sync_playwright() as p:
 
     page.click('[data-action="finish_session"]')
     page.wait_for_url("**/report/**", timeout=30000)
-    page.wait_for_load_state("networkidle")
+    page.wait_for_selector("text=concepts solid", timeout=30000)
     body = page.locator("main").inner_text()
     check("5 of 7 concepts solid" in body, "report shows score ring text")
     check("Calvin cycle" in body and "Fix this gap" in body, "report lists the Calvin cycle gap with a fix button")
@@ -51,8 +51,11 @@ with sync_playwright() as p:
 
     page.locator('[data-action="fix_gap"]').first.click()
     page.wait_for_url("**/lesson/**", timeout=30000)
-    page.wait_for_load_state("networkidle")
-    check("the gap" in page.locator("main").inner_text().lower(), "lesson shows gap box")
+    page.wait_for_selector("text=/the gap/i", timeout=30000)  # streamed after the skeleton
+    lesson_text = page.locator("main").inner_text()
+    if "the gap" not in lesson_text.lower():
+        print("debug lesson page:", page.url, lesson_text[:400])
+    check("the gap" in lesson_text.lower(), "lesson shows gap box")
     page.locator('[data-action="lesson_answer"]').nth(1).click()
     page.wait_for_selector("text=Right.")
     check(True, "check question gives instant feedback")

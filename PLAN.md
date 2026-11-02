@@ -66,13 +66,16 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ## Phase 3 — AI layer
 
-- [ ] `lib/prompts.ts` with all prompts from PROMPTS.md as functions that fill the placeholders
-- [ ] `lib/ai.ts`: `pipReply(session, history)`, `evaluateSession(session)`, `generateLesson(conceptState)`; uses `GEMINI_MODEL`; parses and strips the `<covered>` tag; JSON responses validated with zod, one retry
-- [ ] `lib/demo-responses.ts`: scripted Photosynthesis conversation, evaluation and lesson
-- [ ] Demo mode: used when `DEMO_MODE=true`, when no API key is set, or when an API call fails
-- [ ] Simple in-memory rate limit for AI routes (10 per minute per user)
+- [x] `lib/prompts.ts` with all prompts from PROMPTS.md as functions that fill the placeholders
+- [x] `lib/ai.ts`: `pipReply(session, history)`, `evaluateSession(session)`, `generateLesson(conceptState)`; uses `GEMINI_MODEL`; parses and strips the `<covered>` tag; JSON responses validated with zod, one retry
+- [x] `lib/demo-responses.ts`: scripted Photosynthesis conversation, evaluation and lesson
+- [x] Demo mode: used when `DEMO_MODE=true`, when no API key is set, or when an API call fails
+- [x] Simple in-memory rate limit for AI routes (10 per minute per user)
 
 **Done when:** a small test script (or route) gets a Pip reply both with the real API and with `DEMO_MODE=true`.
+
+- [x] Demo mode: `bash scripts/ai-smoke.sh` passes (Pip reply, evaluation, lesson); no-key and failing-API paths fall back to demo.
+- [x] Real API: verified by user (`npm run ai:check`, and `DEMO_MODE=false bash scripts/ai-smoke.sh` in the user's own terminal).
 
 ---
 
@@ -186,3 +189,8 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Points: 50 per finished session, 30 per gap closed; monthly leaderboard sums `PointEvent` rows in the current month.
 - 2026-11-02 · Seed adds 5 extra "learner" accounts so the sold-out event really has 30 bookings · only 25 named users exist.
 - 2026-11-02 · Demo account is "Jordan Ellis" with 3 finished topics; Photosynthesis left untouched for the stage demo.
+- 2026-11-02 · Demo mode also covers non-Photosynthesis topics with generic Pip replies, a keyword-based evaluation and a lesson built from the concept description · the whole site keeps working offline, not just the stage topic.
+- 2026-11-02 · Gemini retry rule: retry once after 1s only on HTTP 503/429; any other failure (incl. network) goes straight to the fallback model, then demo mode · matches the brief, avoids slow double-failures.
+- 2026-11-02 · Bad JSON from the model (twice) raises `AiFormatError` → friendly error, not demo mode · CLAUDE.md: "retry once, then show a friendly error".
+- 2026-11-02 · Pip's fixed opening is not sent to Gemini (history must start with a user turn) · it's static text anyway.
+- 2026-11-02 · "Confused" Pip messages detected with a small regex on the reply · drives the yellow "?" tag and Pip's confused state without an extra AI call.

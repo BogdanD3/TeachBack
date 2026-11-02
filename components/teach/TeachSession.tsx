@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { postJson } from "@/lib/client/post-json";
+import { postStream } from "@/lib/client/post-stream";
 import { ChatInput } from "./ChatInput";
+import { ProgressSteps } from "./ProgressSteps";
 import { ChatMessage, type ChatMsg } from "./ChatMessage";
 import { ConceptProgress } from "./ConceptProgress";
 import { Pip, type PipState } from "./Pip";
@@ -19,8 +21,10 @@ type Props = {
   initialCovered: string[];
 };
 
-type Reply = { id: string; reply: string; covered: string[]; confused: boolean };
+type Done = { type: "done"; id: string; reply: string; covered: string[]; confused: boolean };
+type StreamEvent = { type: "delta"; text: string } | Done | { type: "error"; message: string };
 const VOICE_KEY = "tb_pip_voice";
+const REPORT_STEPS = ["Reading your explanation…", "Checking each concept…", "Finding quotes from what you said…", "Asking Pip what still confuses them…", "Writing your gap report…"];
 
 export function TeachSession({ sessionId, topic, initialMessages, initialCovered }: Props) {
   const router = useRouter();
@@ -28,6 +32,7 @@ export function TeachSession({ sessionId, topic, initialMessages, initialCovered
   const [covered, setCovered] = useState(initialCovered);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [streamText, setStreamText] = useState("");
   const [gotIt, setGotIt] = useState(false);
   const [error, setError] = useState("");
   const [finishing, setFinishing] = useState(false);
@@ -47,10 +52,10 @@ export function TeachSession({ sessionId, topic, initialMessages, initialCovered
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, sending]);
+  }, [messages, sending, streamText]);
 
   const lastPip = [...messages].reverse().find((m) => m.role === "pip");
-  const pipState: PipState = sending ? "thinking" : gotIt ? "got-it" : lastPip?.confused ? "confused" : "idle";
+  const pipState: PipState = sending ? (streamText ? "idle" : "thinking") : gotIt ? "got-it" : lastPip?.confused ? "confused" : "idle";
   const hasTaught = messages.some((m) => m.role === "teacher");
 
   function toggleVoice() {
@@ -71,22 +76,40 @@ export function TeachSession({ sessionId, topic, initialMessages, initialCovered
     setMessages((m) => [...m, { id: tempId, role: "teacher", content }]);
     setInput("");
     setError("");
-    setSending(true);
+    setSending(true); // Pip's thinking bubble shows right away, until the first words stream in
+    setStreamText("");
     setGotIt(false);
-    const res = await postJson<Reply>(`/api/teach/${sessionId}/message`, { content }, { onRetry: () => send(content) });
+    let done: Done | null = null;
+    let streamError = "";
+    const res = await postStream<StreamEvent>(
+      `/api/teach/${sessionId}/message`,
+      { content },
+      (ev) => {
+        if (ev.type === "delta") setStreamText((s) => s + ev.text);
+        else if (ev.type === "done") done = ev;
+        else streamError = ev.message;
+      },
+      { onRetry: () => send(content) },
+    );
     setSending(false);
-    if (!res.ok) {
+    setStreamText("");
+    if (!res.ok && res.status !== 200) {
       // Nothing was saved: take the bubble back and give the text back.
       setMessages((m) => m.filter((x) => x.id !== tempId));
       setInput(content);
       if (res.error !== "challenge" && res.error !== "blocked") setError(res.message);
       return;
     }
-    const newlyCovered = res.data.covered.some((c) => !covered.includes(c));
-    setCovered(res.data.covered);
+    const d = done as Done | null;
+    if (!d) {
+      setError(streamError || (res.ok ? "Pip didn't finish answering. Reload the page to see the reply." : res.message));
+      return;
+    }
+    const newlyCovered = d.covered.some((c) => !covered.includes(c));
+    setCovered(d.covered);
     setGotIt(newlyCovered);
-    setMessages((m) => [...m, { id: res.data.id, role: "pip", content: res.data.reply, confused: res.data.confused }]);
-    if (voiceOn) voice.speak(res.data.reply);
+    setMessages((m) => [...m, { id: d.id, role: "pip", content: d.reply, confused: d.confused }]);
+    if (voiceOn) voice.speak(d.reply);
   }
 
   async function finish() {
@@ -143,16 +166,20 @@ export function TeachSession({ sessionId, topic, initialMessages, initialCovered
           <div className="mb-8 hidden flex-col items-center md:flex">
             <Pip state={pipState} size={120} />
           </div>
-          <ul className="space-y-4" aria-live="polite" aria-label="Conversation with Pip">
+          {/* aria-busy while streaming: screen readers announce Pip's reply once, when it's complete. */}
+          <ul className="space-y-4" aria-live="polite" aria-busy={sending} aria-label="Conversation with Pip">
             {messages.map((m) => (
               <ChatMessage key={m.id} msg={m} pipState={m === lastPip && !sending ? pipState : undefined} />
             ))}
-            {sending && (
-              <li className="flex items-end gap-2">
-                <Pip state="thinking" size={36} decorative />
-                <span className="rounded-bubble rounded-bl-md border border-line bg-white px-4 py-3 text-ink-2">Pip is thinking…</span>
-              </li>
-            )}
+            {sending &&
+              (streamText ? (
+                <ChatMessage msg={{ id: "streaming", role: "pip", content: streamText }} pipState="idle" streaming />
+              ) : (
+                <li className="flex items-end gap-2">
+                  <Pip state="thinking" size={36} decorative />
+                  <span className="rounded-bubble rounded-bl-md border border-line bg-white px-4 py-3 text-ink-2">Pip is thinking…</span>
+                </li>
+              ))}
           </ul>
           {error && (
             <p role="alert" className="mt-4 rounded-card border border-gap/40 bg-white p-3 text-sm">
@@ -169,11 +196,8 @@ export function TeachSession({ sessionId, topic, initialMessages, initialCovered
 
       {finishing && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-paper/90" role="status">
-          <div className="text-center">
-            <Pip state="thinking" size={110} />
-            <p className="t-h3 mt-4">Pip is writing your gap report…</p>
-            <p className="mt-1 text-ink-2">This takes a few seconds.</p>
-          </div>
+          <ProgressSteps title="Pip is writing your gap report" steps={REPORT_STEPS} />
+
         </div>
       )}
     </div>

@@ -2,7 +2,7 @@ import { Pip, type PipState } from "./Pip";
 
 export type ChatMsg = { id: string; role: "teacher" | "pip"; content: string; confused?: boolean };
 
-export function ChatMessage({ msg, pipState }: { msg: ChatMsg; pipState?: PipState }) {
+export function ChatMessage({ msg, pipState, streaming }: { msg: ChatMsg; pipState?: PipState; streaming?: boolean }) {
   if (msg.role === "teacher") {
     return (
       <li className="flex justify-end">
@@ -23,7 +23,10 @@ export function ChatMessage({ msg, pipState }: { msg: ChatMsg; pipState?: PipSta
             ?
           </span>
         )}
-        <p className="whitespace-pre-wrap">{msg.content}</p>
+        <p className="whitespace-pre-wrap" data-streaming={streaming || undefined}>
+          {msg.content}
+          {streaming && <span className="ml-0.5 inline-block h-[1.1em] w-[2px] translate-y-[3px] animate-pulse bg-coral motion-reduce:animate-none" aria-hidden />}
+        </p>
       </div>
     </li>
   );

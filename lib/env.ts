@@ -16,7 +16,14 @@ export const aiEnv = {
   get demoMode(): boolean {
     return process.env.DEMO_MODE?.trim().toLowerCase() === "true";
   },
+  /** How hard Pip thinks before replying: off | low | medium (default low). */
+  get pipThinking(): ThinkingSetting {
+    const v = process.env.PIP_THINKING?.trim().toLowerCase();
+    return v === "off" || v === "medium" ? v : "low";
+  },
 };
+
+export type ThinkingSetting = "off" | "low" | "medium";
 
 const DEV_SESSION_SECRET = "teachback-dev-only-secret-do-not-use-in-production";
 let warned = false;

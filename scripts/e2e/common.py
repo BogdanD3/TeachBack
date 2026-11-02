@@ -24,6 +24,17 @@ def check(cond, msg):
     print(f"ok   {msg}")
 
 
+CHAT = 'ul[aria-label="Conversation with Pip"]'
+
+
+def wait_pip(page, min_items):
+    """Wait until the chat has `min_items` bubbles and Pip has finished streaming (aria-busy off)."""
+    page.wait_for_function(
+        f"document.querySelectorAll('{CHAT} > li').length >= {min_items}"
+        f" && document.querySelector('{CHAT}')?.getAttribute('aria-busy') === 'false'"
+    )
+
+
 def login(page, email="demo@teachback.app", password="demo1234"):
     page.goto(BASE + "/auth/login", wait_until="networkidle")
     page.fill("#login-email", email)

@@ -177,6 +177,47 @@ This is the step-by-step build plan. Work through it **in order**, phase by phas
 
 ---
 
+## Phase 10 — Speed, primers, lessons everywhere, voice, production readiness
+
+Lint + build + e2e + commit after each numbered item. Never reseed `prisma/dev.db` (e2e uses its own DB).
+
+1. Speed and streaming
+   - [x] Stream Pip's replies word by word (`generateContentStream` + streaming route); strip `<covered>` while streaming, parse it from the full text at the end
+   - [x] Thinking state shows immediately on send, until the first words arrive
+   - [x] `PIP_THINKING` (off | low | medium, default low) mapped to the SDK thinking option; moderate thinking for evaluation, lessons, primers
+   - [x] Tight `maxOutputTokens` for Pip, with room for thinking
+   - [x] Fallback before the first token → fallback model; demo mode "streams" word by word
+   - [x] Progress screen with changing status lines for evaluation and lessons
+   - [x] Before/after timings in the Decisions log (user measures the real API)
+
+   > Verified: `GEMINI_API_KEY=fake DEMO_MODE=false node --import tsx scripts/stream-check.ts` (tag never leaks at any chunk split; both models fail before the first token → demo, streamed word by word). `E2E_PROD=1 bash scripts/e2e.sh learning.py a11y.py` pass (partial bubble shorter than final, no tag shown). Real API: user to run `npm run ai:check` and watch `[ai] pip streamed by …` logs.
+2. Hydration
+   - [ ] `suppressHydrationWarning` on `<body>` (Grammarly extension)
+3. Learn before teaching
+   - [ ] Primer at `/library/[slug]/learn` (quick) and `?depth=full` (from scratch): generated once per topic + depth, cached in the DB, server-rendered; prompt in PROMPTS.md + lib/prompts.ts; demo primers
+   - [ ] Topic page: three start options (teach / quick primer / from scratch)
+   - [ ] "Peek" in the teach session: 1–2 sentence hint from the primer, costs 5 points, recorded on the session; the gap report notes peeked concepts
+   - [ ] DESIGN.md: primer page and Peek button
+4. Lessons reachable everywhere
+   - [ ] Map: shaky/gap concept → "Fix this gap" button to its lesson
+   - [ ] Dashboard: "Your lessons" section; weakest concepts link to their lessons
+   - [ ] Topic page lists the user's lessons for that topic
+5. Voice in every browser
+   - [ ] MediaRecorder + `POST /api/transcribe` (Gemini main → fallback, demo transcript), text goes into the input for review; max 60 s; `checkRequest(req, "ai_message")`
+   - [ ] Mic shown wherever MediaRecorder + getUserMedia exist; speechSynthesis kept for Pip's voice
+6. DEMO.md
+   - [ ] New flow: primer → teach with streaming → peek → report → lesson
+7. Production readiness
+   - [ ] `GET /api/health` → `{ ok, db, ai }`
+   - [ ] `scripts/deploy.sh` (pull, ci, migrate deploy, build, pm2 restart; never seeds)
+   - [ ] `scripts/backup-db.sh` (timestamped copy, keep 14), `backups/` ignored, cron line in DEPLOY.md
+   - [ ] Secure cookies in production; `botlens_force` cookie off in production; refuse to start in production if `DEMO_MODE` unset or `SESSION_SECRET` < 32 chars
+   - [ ] DEPLOY.md: fresh-server walkthrough (Node LTS, PM2, Nginx + X-Forwarded headers, certbot) + update flow with `scripts/deploy.sh`
+
+**Done when:** every item above is ticked, each committed separately, and the e2e suites pass.
+
+---
+
 ## Decisions log
 
 Add one line per decision: date · decision · reason.
@@ -244,3 +285,15 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · `demo:reset` = `migrate deploy` + seed with `DEMO_OPENS_IN_MIN=3` (no `migrate reset`) · seed wipes its own tables; avoids Prisma's AI consent gate and works on the server.
 - 2026-11-02 · e2e scripts wait for streamed content, not `networkidle` · production client navigation finishes before the streamed page arrives.
 - 2026-11-02 · Community also shows the latest topic reviews (DESIGN: "review cards with stars") · reviews are written on topic pages.
+- 2026-11-02 · (phase 10) Pip streams as NDJSON over a POST fetch (`delta` lines, then one `done` line with id/covered/confused after the DB save), not SSE · keeps the POST body and the JSON error responses (BotLens 403/429, rate limit) exactly as before; `postStream` shares `postJson`'s error handling.
+- 2026-11-02 · Hiding `<covered>` mid-stream: visible text = everything before `<covered`, also holding back a trailing partial like `<cov` · the final reply and covered list are parsed from the full text when the stream ends and replace the streamed bubble.
+- 2026-11-02 · `PIP_THINKING` → `thinkingConfig.thinkingLevel` (SDK 2.32): off → `MINIMAL`, low → `LOW` (default), medium → `MEDIUM` · Gemini 3 models take thinking levels (`thinkingBudget` is the 2.5-era knob) and Flash can't switch thinking fully off, MINIMAL is the lowest. If a model answers HTTP 400 to a thinking level, the same model is retried once without it. **User: add `PIP_THINKING=low` to `.env.example` (Claude can't edit it).**
+- 2026-11-02 · Evaluation, lessons and primers use thinking level `MEDIUM` · "moderate"; the Gemini 3 default is high/dynamic, so this is also faster than before.
+- 2026-11-02 · Pip `maxOutputTokens`: off 400 / low 1200 / medium 2400 · the visible reply + tag is ~150 tokens, but Gemini counts thinking tokens against the same cap; JSON calls stay uncapped. Gemini HTTP timeout 20 s → 30 s · lessons were already ~15 s.
+- 2026-11-02 · Stream failures: the fallback rules (retry on 503/429, then fallback model) apply until the first non-empty chunk; after that a broken stream keeps the text that arrived (logged) · switching models mid-sentence would show two different answers. No text at all → demo reply.
+- 2026-11-02 · Demo replies "stream" one word every 35 ms · looks the same as the real thing, ~0.8 s per reply.
+- 2026-11-02 · If the browser disconnects mid-stream the server finishes the reply and saves it · a reload shows Pip's answer instead of a dangling question.
+- 2026-11-02 · Chunks are shown as they arrive, no client-side typewriter smoothing · honest latency, less code; a blinking coral caret marks the streaming bubble.
+- 2026-11-02 · Chat list is `aria-busy` while Pip streams · screen readers announce the finished reply once, not every word; e2e waits for `aria-busy="false"` (`wait_pip`).
+- 2026-11-02 · Timings. Before (user, real API): nothing visible until the full reply, 5–10 s; lessons ~15 s behind a static skeleton. After, demo mode on a production build (`learning.py`): thinking bubble 23 ms after Enter, first words 106 ms, full reply 852 ms. Real API to be measured by the user: the server logs `[ai] pip streamed by <model>: first text X ms, done Y ms` and `[ai] lesson answered by <model> in X ms`; `npm run ai:check` now also prints stream first-words/done times for the current `PIP_THINKING`.
+- 2026-11-02 · Gap report and lesson waits show `ProgressSteps`: Pip thinking + status lines that tick every 2.6 s and stop on the last one · the work is one server call, so the lines are paced, not real progress events.

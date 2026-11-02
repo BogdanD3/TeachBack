@@ -2,7 +2,7 @@
    DEMO_OPENS_IN_MIN=1 bash scripts/e2e.sh demo.py"""
 import os
 from playwright.sync_api import sync_playwright
-from common import BASE, OUT, check, launch, login
+from common import BASE, OUT, check, launch, login, wait_pip
 
 MESSAGES = [
     "Photosynthesis is how plants make their own food. Chlorophyll, the green pigment in leaves, captures light energy.",
@@ -28,10 +28,7 @@ with sync_playwright() as p:
     for i, m in enumerate(MESSAGES):
         page.fill("#teach-message", m)
         page.keyboard.press("Enter")
-        page.wait_for_function(
-            f"document.querySelectorAll('ul[aria-label=\"Conversation with Pip\"] > li').length >= {3 + 2 * i}"
-            " && !document.body.innerText.includes('Pip is thinking')"
-        )
+        wait_pip(page, 3 + 2 * i)
     header = page.locator("header").inner_text()
     check("6 of 7" in header, "4 six messages → 6 of 7 concepts covered")
     page.click('[data-action="finish_session"]')

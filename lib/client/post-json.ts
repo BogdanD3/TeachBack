@@ -20,7 +20,7 @@ export async function postJson<T = unknown>(url: string, body: unknown, opts?: {
       body: JSON.stringify(body),
     });
   } catch {
-    return { ok: false, status: 0, error: "network", message: "You seem to be offline. Check your connection and try again." };
+    return OFFLINE;
   }
   let data: Record<string, unknown> = {};
   try {
@@ -29,22 +29,28 @@ export async function postJson<T = unknown>(url: string, body: unknown, opts?: {
     /* empty body */
   }
   if (res.ok) return { ok: true, status: res.status, data: data as T };
+  return failure(res.status, data, opts?.onRetry);
+}
 
+export const OFFLINE: ApiResult<never> = { ok: false, status: 0, error: "network", message: "You seem to be offline. Check your connection and try again." };
+
+/** Turn an error response body into an ApiResult, firing the BotLens modal for blocked/challenge. */
+export function failure(status: number, data: Record<string, unknown>, onRetry?: () => void): ApiResult<never> {
   const error = typeof data.error === "string" ? data.error : "error";
   if (error === "blocked" || error === "challenge") {
-    window.dispatchEvent(new CustomEvent<BotLensVerdictDetail>(BOTLENS_EVENT, { detail: { kind: error, retry: opts?.onRetry } }));
+    window.dispatchEvent(new CustomEvent<BotLensVerdictDetail>(BOTLENS_EVENT, { detail: { kind: error, retry: onRetry } }));
   }
   const fallback =
     error === "blocked"
       ? "This action was blocked."
       : error === "challenge"
         ? "Please verify you're human to continue."
-        : res.status === 401
+        : status === 401
           ? "Please log in first."
           : "Something went wrong. Try again.";
   return {
     ok: false,
-    status: res.status,
+    status,
     error,
     message: typeof data.message === "string" ? data.message : fallback,
     fields: (data.fields as Record<string, string> | undefined) ?? undefined,

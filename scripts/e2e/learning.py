@@ -1,7 +1,8 @@
 """Phase 5: library → teach → finish → report → lesson → teach again → map (demo account)."""
 import os
+import time
 from playwright.sync_api import sync_playwright
-from common import BASE, OUT, check, launch, login
+from common import BASE, CHAT, OUT, check, launch, login, wait_pip
 
 os.makedirs(OUT, exist_ok=True)
 W = int(os.environ.get("WIDTH", "375"))
@@ -30,11 +31,22 @@ with sync_playwright() as p:
     ]
     for i, m in enumerate(msgs):
         page.fill("#teach-message", m)
+        t0 = time.time()
         page.keyboard.press("Enter")
-        page.wait_for_function(
-            f"document.querySelectorAll('ul[aria-label=\"Conversation with Pip\"] > li').length >= {3 + 2 * i}"
-            " && !document.body.innerText.includes('Pip is thinking')"
-        )
+        if i == 0:
+            # Streaming: thinking bubble right away, then a partial bubble that grows, then the final one.
+            page.wait_for_selector("text=Pip is thinking", timeout=2000)
+            t_think = time.time() - t0
+            page.wait_for_selector("[data-streaming]", timeout=10000)
+            t_first = time.time() - t0
+            partial = page.locator("[data-streaming]").inner_text()
+            wait_pip(page, 3)
+            t_done = time.time() - t0
+            final = page.locator(f"{CHAT} > li").last.inner_text()
+            check(len(partial) < len(final), f"reply streams in (partial {len(partial)} < final {len(final)} chars)")
+            check("<covered" not in final and "covered>" not in final, "hidden <covered> tag never shown")
+            print(f"     timings (demo mode): thinking {t_think*1000:.0f} ms, first words {t_first*1000:.0f} ms, done {t_done*1000:.0f} ms")
+        wait_pip(page, 3 + 2 * i)
     page.wait_for_timeout(300)
     progress = page.locator("header").inner_text()
     check("2 of 7" in progress or "3 of 7" in progress, f"progress updates ({progress.split(chr(10))[-1].strip()})")

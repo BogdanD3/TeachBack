@@ -3,7 +3,7 @@ Flags: horizontal scroll, tap targets < 44px (inline text links exempt), unnamed
 inputs without a label, images without alt, and keyboard use of the chat."""
 import sys
 from playwright.sync_api import sync_playwright
-from common import BASE, check, launch, login
+from common import BASE, check, launch, login, wait_pip
 
 PAGES = ["/", "/library", "/library/photosynthesis", "/live", "/leaderboard", "/community", "/community/new", "/pricing",
          "/checkout?plan=pro", "/referral", "/profile", "/dashboard", "/map", "/styleguide", "/no-such-page"]
@@ -46,7 +46,7 @@ with sync_playwright() as p:
     check(page.evaluate("document.activeElement?.id") == "teach-message", "chat: message box reachable with Tab")
     page.keyboard.type("The base case is the smallest input, answered directly without recursing.")
     page.keyboard.press("Enter")
-    page.wait_for_function("document.querySelectorAll('ul[aria-label=\"Conversation with Pip\"] > li').length >= 3 && !document.body.innerText.includes('Pip is thinking')")
+    wait_pip(page, 3)
     check(True, "chat: Enter sends and Pip replies")
     focus_style = page.evaluate("getComputedStyle(document.activeElement).outlineStyle + ' ' + getComputedStyle(document.activeElement).borderColor")
     check(True, f"chat: focus style after send = {focus_style}")

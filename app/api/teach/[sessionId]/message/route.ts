@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { pipReply } from "@/lib/ai";
-import { apiError, botGuard, json, parseBody } from "@/lib/api";
+import { pipReplyStream } from "@/lib/ai";
+import { apiError, botGuard, parseBody } from "@/lib/api";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { aiRateLimit } from "@/lib/rate-limit";
@@ -32,9 +32,41 @@ export async function POST(req: Request, { params }: { params: Promise<{ session
   await db.message.create({ data: { teachSessionId: session.id, role: "teacher", content: data.content } });
   const history = [...session.messages.map((m) => ({ role: m.role as "teacher" | "pip", content: m.content })), { role: "teacher" as const, content: data.content }];
 
-  const result = await pipReply(toTopicContext(topic), history, splitCovered(session.covered));
-  const pipMsg = await db.message.create({ data: { teachSessionId: session.id, role: "pip", content: result.reply, confused: result.confused } });
-  await db.teachSession.update({ where: { id: session.id }, data: { covered: result.covered.join("|") } });
-
-  return json({ id: pipMsg.id, reply: result.reply, covered: result.covered, confused: result.confused, source: result.source });
+  // NDJSON stream: {"type":"delta","text":"…"} lines while Pip "types", then one
+  // {"type":"done",id,reply,covered,confused,source} line once the reply is saved.
+  const events = pipReplyStream(toTopicContext(topic), history, splitCovered(session.covered));
+  const encoder = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let open = true;
+      const send = (obj: unknown) => {
+        if (!open) return;
+        try {
+          controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+        } catch {
+          open = false; // client went away; keep going so the reply is still saved
+        }
+      };
+      try {
+        for await (const ev of events) {
+          if (ev.type === "delta") {
+            send(ev);
+            continue;
+          }
+          const r = ev.result;
+          const pipMsg = await db.message.create({ data: { teachSessionId: session.id, role: "pip", content: r.reply, confused: r.confused } });
+          await db.teachSession.update({ where: { id: session.id }, data: { covered: r.covered.join("|") } });
+          send({ type: "done", id: pipMsg.id, reply: r.reply, covered: r.covered, confused: r.confused, source: r.source });
+        }
+      } catch (e) {
+        console.error("[teach] message stream failed", e instanceof Error ? e.message : e);
+        send({ type: "error", message: "Pip lost the thread. Send that again?" });
+      } finally {
+        if (open) controller.close();
+      }
+    },
+  });
+  return new Response(body, {
+    headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no" },
+  });
 }

@@ -2,7 +2,8 @@
 import type { Content } from "@google/genai";
 import { evaluationSchema, lessonSchema, type ChatTurn, type Evaluation, type LessonContent, type PipResult, type TopicContext } from "./ai-types";
 import { demoEvaluation, demoLesson, demoPipReply } from "./demo-responses";
-import { AiUnavailableError, generate } from "./gemini";
+import { aiEnv, type ThinkingSetting } from "./env";
+import { AiUnavailableError, generate, generateStream } from "./gemini";
 import { evaluationPrompt, lessonPrompt, pipSystemPrompt } from "./prompts";
 
 export class AiFormatError extends Error {
@@ -39,24 +40,93 @@ function toContents(history: ChatTurn[]): Content[] {
   return turns.map((t) => ({ role: t.role === "teacher" ? "user" : "model", parts: [{ text: t.content }] }));
 }
 
-export async function pipReply(topic: TopicContext, history: ChatTurn[], alreadyCovered: string[] = []): Promise<PipResult> {
+/**
+ * Visible part of a partially streamed Pip reply: everything before the hidden <covered> tag,
+ * also holding back a trailing "<cov…" that might be the start of it.
+ */
+export function visiblePipText(full: string): string {
+  const tag = "<covered";
+  const idx = full.toLowerCase().indexOf(tag);
+  if (idx >= 0) return full.slice(0, idx);
+  for (let k = Math.min(tag.length - 1, full.length); k > 0; k--) {
+    if (tag.startsWith(full.slice(-k).toLowerCase())) return full.slice(0, -k);
+  }
+  return full;
+}
+
+// Pip writes 1–3 sentences (~60–90 tokens) plus the <covered> tag (~40 tokens). Gemini counts
+// thinking tokens against maxOutputTokens, so the cap grows with the thinking level.
+const PIP_MAX_TOKENS: Record<ThinkingSetting, number> = { off: 400, low: 1200, medium: 2400 };
+/** Evaluation, lessons and primers think moderately: better JSON, still well under the default (high). */
+const JSON_THINKING: ThinkingSetting = "medium";
+/** Demo answers are "streamed" word by word so they look like the real thing. */
+const DEMO_WORD_MS = 35;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+export type PipStreamEvent = { type: "delta"; text: string } | { type: "done"; result: PipResult };
+
+/**
+ * Pip's reply as a stream of visible text deltas, ending with a `done` event that carries the
+ * full parsed result (reply without the tag, covered concepts, confused flag).
+ * Failure before the first token → fallback model → demo mode (inside generateStream / here).
+ */
+export async function* pipReplyStream(topic: TopicContext, history: ChatTurn[], alreadyCovered: string[] = []): AsyncGenerator<PipStreamEvent> {
   const names = topic.concepts.map((c) => c.name);
+  let full = "";
+  let sent = "";
+  let model: string | undefined;
   try {
-    const { text, model } = await generate({ system: pipSystemPrompt(topic.title, names), contents: toContents(history) }, "pip");
-    const { reply, covered } = parsePipText(text, names);
-    if (!reply) throw new AiUnavailableError("Empty Pip reply");
-    return { reply, covered: [...new Set([...alreadyCovered, ...covered])], confused: isConfused(reply), source: "gemini", model };
+    const thinking = aiEnv.pipThinking;
+    const stream = await generateStream(
+      { system: pipSystemPrompt(topic.title, names), contents: toContents(history), thinking, maxOutputTokens: PIP_MAX_TOKENS[thinking] },
+      "pip",
+    );
+    model = stream.model;
+    try {
+      for await (const chunk of stream.chunks) {
+        full += chunk;
+        const visible = visiblePipText(full);
+        if (visible.length > sent.length) {
+          yield { type: "delta", text: visible.slice(sent.length) };
+          sent = visible;
+        }
+      }
+    } catch (e) {
+      // Already showing text: keep what arrived instead of swapping in a different answer.
+      console.warn(`[ai] pip stream broke after ${sent.length} chars on ${model} (${e instanceof Error ? e.message : "error"})`);
+    }
   } catch (e) {
     console.info(`[ai] pip served from demo mode (${e instanceof Error ? e.message : "error"})`);
-    const demo = demoPipReply(topic, history, alreadyCovered);
-    return { ...demo, confused: isConfused(demo.reply), source: "demo" };
   }
+
+  const parsed = parsePipText(full, names);
+  if (parsed.reply) {
+    const covered = [...new Set([...alreadyCovered, ...parsed.covered])];
+    yield { type: "done", result: { reply: parsed.reply, covered, confused: isConfused(parsed.reply), source: "gemini", model } };
+    return;
+  }
+
+  const demo = demoPipReply(topic, history, alreadyCovered);
+  for (const piece of demo.reply.match(/\S+\s*/g) ?? []) {
+    await sleep(DEMO_WORD_MS);
+    yield { type: "delta", text: piece };
+  }
+  yield { type: "done", result: { ...demo, confused: isConfused(demo.reply), source: "demo" } };
+}
+
+/** Non-streaming convenience (scripts): collects the stream. */
+export async function pipReply(topic: TopicContext, history: ChatTurn[], alreadyCovered: string[] = []): Promise<PipResult> {
+  for await (const ev of pipReplyStream(topic, history, alreadyCovered)) {
+    if (ev.type === "done") return ev.result;
+  }
+  throw new AiUnavailableError("Pip stream ended without a result");
 }
 
 /** Call the model for JSON, validate with zod, retry once on bad JSON. */
 async function generateJson<T>(prompt: string, parse: (raw: unknown) => T | null, label: string): Promise<T> {
   for (let attempt = 0; attempt < 2; attempt++) {
-    const { text } = await generate({ contents: prompt, json: true }, label);
+    const { text } = await generate({ contents: prompt, json: true, thinking: JSON_THINKING }, label);
     try {
       const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
       const result = parse(JSON.parse(cleaned));

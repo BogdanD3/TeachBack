@@ -28,12 +28,15 @@ with sync_playwright() as p:
         page.keyboard.press("Escape")
         page.wait_for_selector("dialog[open]", state="detached", timeout=5000)
 
-    # Warm up: compile every API route and page first, so the dev server doesn't reload pages mid-test.
-    for path in ["/api/auth/signup", "/api/teach/x/message", "/api/teach/x/finish", "/api/live/x/book", "/api/reviews",
-                 "/api/community/threads", "/api/checkout/promo", "/api/checkout", "/api/referral/claim"]:
-        page.request.post(BASE + path, data="{}", headers={"Content-Type": "application/json"})
+    # Warm up: compile every page and API route first, so the dev server doesn't reload pages mid-test.
+    # Pages first, then each API route followed by a page load: compiling all routes back to back made
+    # Turbopack's dev HMR client reload the next page in a loop (dev-only, see PLAN.md decisions).
     for path in ["/auth/signup", "/auth/login", "/teach/photosynthesis", "/live", "/library/photosynthesis", "/community/new", "/checkout", "/referral"]:
         page.goto(BASE + path, wait_until="networkidle")
+    for path in ["/api/auth/signup", "/api/teach/x/message", "/api/teach/x/finish", "/api/live/x/book", "/api/reviews",
+                 "/api/community/threads", "/api/checkout/promo", "/api/checkout", "/api/referral/claim", "/api/transcribe"]:
+        page.request.post(BASE + path, data="{}", headers={"Content-Type": "application/json"})
+        page.goto(BASE + "/auth/login", wait_until="networkidle")
 
     # Raw API contract
     for kind, status, err in (("block", 403, "blocked"), ("challenge", 429, "challenge")):

@@ -73,7 +73,7 @@ def flow(page, who, review_topic, promo, referral_weeks):
     check("/signup?ref=" in page.input_value("#referral-link"), f"{who}: referral link shown")
     if referral_weeks:
         page.click('[data-action="referral_claim"]')
-        page.wait_for_selector("text=free week added")
+        page.wait_for_selector("text=/free weeks? added/")  # auth.py may have added a second referred friend
         check(True, f"{who}: claimed {referral_weeks} free week")
     else:
         check(page.locator('[data-action="referral_claim"]').is_disabled(), f"{who}: nothing to claim yet")

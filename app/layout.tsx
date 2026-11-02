@@ -41,7 +41,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             loads on every page before any form is used.
            ============================================================ */}
       </head>
-      <body className="min-h-dvh bg-paper text-ink">
+      {/* Browser extensions (e.g. Grammarly) add attributes to <body> before React hydrates. */}
+      <body className="min-h-dvh bg-paper text-ink" suppressHydrationWarning>
         <ChromeGate>
           <SiteHeader user={user ? { name: user.name, plan: user.plan } : null} />
         </ChromeGate>

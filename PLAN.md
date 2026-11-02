@@ -192,7 +192,7 @@ Lint + build + e2e + commit after each numbered item. Never reseed `prisma/dev.d
 
    > Verified: `GEMINI_API_KEY=fake DEMO_MODE=false node --import tsx scripts/stream-check.ts` (tag never leaks at any chunk split; both models fail before the first token → demo, streamed word by word). `E2E_PROD=1 bash scripts/e2e.sh learning.py a11y.py` pass (partial bubble shorter than final, no tag shown). Real API: user to run `npm run ai:check` and watch `[ai] pip streamed by …` logs.
 2. Hydration
-   - [ ] `suppressHydrationWarning` on `<body>` (Grammarly extension)
+   - [x] `suppressHydrationWarning` on `<body>` (Grammarly extension)
 3. Learn before teaching
    - [ ] Primer at `/library/[slug]/learn` (quick) and `?depth=full` (from scratch): generated once per topic + depth, cached in the DB, server-rendered; prompt in PROMPTS.md + lib/prompts.ts; demo primers
    - [ ] Topic page: three start options (teach / quick primer / from scratch)
@@ -296,4 +296,5 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · Chunks are shown as they arrive, no client-side typewriter smoothing · honest latency, less code; a blinking coral caret marks the streaming bubble.
 - 2026-11-02 · Chat list is `aria-busy` while Pip streams · screen readers announce the finished reply once, not every word; e2e waits for `aria-busy="false"` (`wait_pip`).
 - 2026-11-02 · Timings. Before (user, real API): nothing visible until the full reply, 5–10 s; lessons ~15 s behind a static skeleton. After, demo mode on a production build (`learning.py`): thinking bubble 23 ms after Enter, first words 106 ms, full reply 852 ms. Real API to be measured by the user: the server logs `[ai] pip streamed by <model>: first text X ms, done Y ms` and `[ai] lesson answered by <model> in X ms`; `npm run ai:check` now also prints stream first-words/done times for the current `PIP_THINKING`.
+- 2026-11-02 · (user) `suppressHydrationWarning` on `<body>` only · it silences attribute mismatches on that one element (Grammarly adds `data-gr-*`), not on the page content.
 - 2026-11-02 · Gap report and lesson waits show `ProgressSteps`: Pip thinking + status lines that tick every 2.6 s and stop on the last one · the work is one server call, so the lines are paced, not real progress events.

@@ -51,8 +51,12 @@ export function readMinutes(p: PrimerContent): number {
  * The concept Pip is most likely asking about: the uncovered concept whose name shares the most
  * words with Pip's last message; ties (or no overlap) → the first uncovered concept in topic order.
  */
+const STOPWORDS = new Set(
+  "about after again also because been before being does doing done each from have here into just like made make many more most much only other over same some such than that their them then there these they thing this those through very what when where which while with would your comes come goes works".split(" "),
+);
+
 export function pickPeekConcept(concepts: string[], covered: string[], lastPip: string): string {
-  const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3);
+  const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 3 && !STOPWORDS.has(w));
   const said = new Set(words(lastPip));
   const open = concepts.filter((c) => !covered.includes(c));
   const pool = open.length ? open : concepts;

@@ -212,7 +212,9 @@ Lint + build + e2e + commit after each numbered item. Never reseed `prisma/dev.d
 
    > Verified: `bash scripts/e2e.sh voice.py` (dev, incl. BotLens challenge modal on transcription) and `E2E_PROD=1 … voice.py a11y.py` pass with Chromium's fake microphone: 401 logged out, 400 for missing/non-audio uploads, timer, demo transcript lands in the input unsent, then sends. Real transcription quality: user to test on a phone over HTTPS.
 6. DEMO.md
-   - [ ] New flow: primer → teach with streaming → peek → report → lesson
+   - [x] New flow: primer → teach with streaming → peek → report → lesson
+
+   > Verified: `DEMO_OPENS_IN_MIN=2 E2E_PROD=1 bash scripts/e2e.sh demo.py` runs the new DEMO.md click path end to end (primer, message 1 via the mic, streamed replies, peek on light-dependent reactions, report with the Peeked badge, lesson, map → lesson, dashboard, live booking, leaderboard).
 7. Production readiness
    - [ ] `GET /api/health` → `{ ok, db, ai }`
    - [ ] `scripts/deploy.sh` (pull, ci, migrate deploy, build, pm2 restart; never seeds)
@@ -316,5 +318,7 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · (user) Speech-to-text = MediaRecorder + `POST /api/transcribe` (multipart, zod-validated, BotLens `ai_message`, AI rate limit) → Gemini with the audio as inline data, main then fallback, thinking `off`; demo mode returns the first stage-demo Photosynthesis message (other topics: their first concept description). The Web Speech recognition hook is gone; `speechSynthesis` stays for Pip's voice.
 - 2026-11-02 · Recording format: first of webm/opus, webm, ogg/opus, mp4, aac that `MediaRecorder.isTypeSupported` accepts (Chrome/Firefox → webm, Safari → mp4); codecs parameter stripped before sending to Gemini. Limits: client auto-stops at 60 s with a visible timer; server rejects > 4 MB or non-audio types.
 - 2026-11-02 · The transcript is appended to whatever is already typed and focused, never sent automatically · the user checks it first (brief). A BotLens challenge on transcription resends the same recording after "I'm human".
+- 2026-11-02 · DEMO.md: peek after message 3, so the hint is about the light-dependent reactions that message 4 explains; message 1 can be dictated (the demo transcript equals message 1). Warm-up step added: open the primer once after `demo:reset` (the reseed clears the primer cache).
+- 2026-11-02 · Peek's word matching ignores common words ("where", "what", "comes"…) · "Is that where everything happens?" matched "Where the oxygen comes from".
 - 2026-11-02 · Chat placeholder shortened to "Explain it to Pip…" · the old text wrapped inside the 48px input at 375px.
 - 2026-11-02 · Gap report and lesson waits show `ProgressSteps`: Pip thinking + status lines that tick every 2.6 s and stop on the last one · the work is one server call, so the lines are paced, not real progress events.

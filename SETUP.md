@@ -4,7 +4,7 @@
 
 1. Go to Google AI Studio (aistudio.google.com) and sign in with a Google account.
 2. Click **Get API key** → **Create API key**.
-3. In AI Studio, check which **Flash** model is currently offered on the free tier and copy its model name (e.g. `gemini-2.5-flash` or newer).
+3. In AI Studio, check which **Flash** model is currently offered on the free tier and copy its model name. We use `gemini-3.6-flash` with `gemini-3.5-flash` as the fallback (`gemini-2.5-flash` is no longer available to new keys).
 
 Free tier notes:
 - It costs nothing and needs no credit card, but has per-minute and per-day request limits. Check your exact limits in AI Studio, since Google changes them.
@@ -29,7 +29,8 @@ Fill in `.env`:
 
 ```
 GEMINI_API_KEY=your_key_here
-GEMINI_MODEL=gemini-2.5-flash
+GEMINI_MODEL=gemini-3.6-flash
+GEMINI_FALLBACK_MODEL=gemini-3.5-flash
 DEMO_MODE=false
 SESSION_SECRET=any-long-random-string
 DATABASE_URL="file:./dev.db"

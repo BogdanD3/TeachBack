@@ -1,0 +1,39 @@
+# Never in the image: secrets, local databases, build output, tooling, tests.
+# Every dotfile/dot-folder at the root is excluded (.env, .claude, shell/git configs, .mcp.json …):
+# the build needs none of them.
+.*
+**/.env
+**/.env*
+*.db
+*.db-journal
+**/*.db
+**/*.db-journal
+prisma/*.db
+prisma/*.db-journal
+backups
+logs
+
+node_modules
+.next
+.next-e2e
+.next-*
+out
+build
+*.tsbuildinfo
+
+.venv
+__pycache__
+.claude
+.idea
+.vscode
+.git
+.gitignore
+.gitmodules
+
+screenshots
+test-results
+playwright-report
+
+Dockerfile
+docker-compose.yml
+.dockerignore

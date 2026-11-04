@@ -228,6 +228,18 @@ Lint + build + e2e + commit after each numbered item. Never reseed `prisma/dev.d
 
 ---
 
+## Phase 11 — Docker deploy (recommended path; PM2 files stay)
+
+- [x] `Dockerfile`: multi-stage on node:22-slim, full production build (no standalone), non-root `node` user, `0.0.0.0:3000`
+- [x] `docker/entrypoint.sh`: `prisma migrate deploy`, then `next start`; never seeds; arguments run instead (shell, restore)
+- [x] `docker-compose.yml`: service `teachback`, `env_file: .env`, `DATABASE_URL=file:/app/data/teachback.db` under `environment:`, `127.0.0.1:3001:3000`, volume `teachback-data`, `restart: unless-stopped`, healthcheck on `/api/health`
+- [x] `.dockerignore`; `scripts/docker-backup.sh` (timestamped, keep 14) + `scripts/docker-restore.sh`; `npm run docker:*` shortcuts
+- [x] DEPLOY.md: Docker section first (build, start, logs, update, backup, restore, demo reset, Nginx → 127.0.0.1:3001 with streaming + upload settings)
+
+> Verified without Docker (the sandbox doesn't drive the Docker daemon): a production build against a missing DB file succeeds (every DB page is ƒ dynamic); a scratchpad simulation of the container runtime (fresh data dir, absolute `DATABASE_URL`, `NODE_ENV=production`) ran the entrypoint → migrations on an empty DB, healthy, 0 users; `npm run demo:reset` seeded it (31 users) and the running app served the seeded data; the backup's `sqlite3 .backup` snapshot was complete while the app ran; a restart found no pending migrations and kept the data; pass-through mode ran its command without migrating. `docker compose config` with a dummy `.env` shows `DATABASE_URL` from `environment:` overriding `.env`. Lint, production build and `auth.py lessons.py check-404.sh check-ssr.sh check-prod.sh` pass. Building and running the image itself: user to test on the laptop.
+
+---
+
 ## Decisions log
 
 Add one line per decision: date · decision · reason.
@@ -331,5 +343,14 @@ Add one line per decision: date · decision · reason.
 - 2026-11-02 · botlens.py warm-up reordered (pages first, then each API route followed by a page load) · compiling all API routes back to back on the dev server sent Turbopack's HMR client into a full-reload loop (73 reloads in 5 s, then `ERR_INSUFFICIENT_RESOURCES`); not reproducible on a production build or with interleaved loads. `scripts/e2e/debug_warmup.py` is the probe.
 - 2026-11-02 · platform.py accepts "free week(s) added" · when auth.py runs first it signs up a second friend via Jordan's link.
 - 2026-11-02 · Phase 10 final regression: `E2E_PROD=1 bash scripts/e2e.sh auth.py learning.py platform.py a11y.py` + `… primer.py lessons.py voice.py check-404.sh check-ssr.sh check-prod.sh` + `demo.py` all pass on a production build; `botlens.py` passes on dev.
+- 2026-11-04 · (user) Docker is the recommended deploy path; PM2 files and scripts stay working.
+- 2026-11-04 · No Next.js standalone output · the container must run `prisma migrate deploy` on start and `npm run demo:reset` via `docker compose exec`; standalone only traces the server, leaving out the Prisma CLI + schema engine, tsx, `prisma/seed.ts` + seed-data and `lib/demo-responses.ts`. The runtime stage copies the whole build stage (`/app` incl. all of node_modules), so those are there by construction. Cost: a bigger image (dev deps included).
+- 2026-11-04 · Image installs `openssl`, `ca-certificates`, `sqlite3` on node:22-slim · Prisma's docs list openssl for slim images (engine detection: debian-openssl-3.0.x); sqlite3 gives consistent backups; ca-certificates for HTTPS to Gemini. Build and runtime share one base, so the generated engine matches.
+- 2026-11-04 · node:22 ships npm 10, which ignores package.json `allowScripts` and runs all install scripts · checked: the two we deny locally are a no-op echo (@google/genai) and a version check (protobufjs). Lockfile v3 and no dependency needs Node > 22.
+- 2026-11-04 · Entrypoint runs its arguments instead of migrate + start when given any · `docker compose run --rm --no-deps teachback sh` and the restore script get a container without touching the DB.
+- 2026-11-04 · Healthcheck uses `node -e fetch(…)` · no curl in the slim image. `init: true` in compose so signals reach node.
+- 2026-11-04 · `.dockerignore` excludes every root dotfile (`.*`) besides the requested list · the project folder holds untracked shell/git configs and `.mcp.json` that must never end up in an image.
+- 2026-11-04 · Docker backups: `scripts/docker-backup.sh` snapshots with `sqlite3 .backup` inside the running container, `docker compose cp`s it to `backups/teachback-<stamp>.db`, keeps 14; `scripts/docker-restore.sh <file>` stops the app, copies the file in via a one-off container as uid 1000 (keeps the old DB as `.before-restore`), starts again.
+- 2026-11-04 · Nginx in a container can't reach `127.0.0.1:3001` on the host · DEPLOY.md notes the shared-network alternative (`proxy_pass http://teachback:3000`).
 - 2026-11-02 · Chat placeholder shortened to "Explain it to Pip…" · the old text wrapped inside the 48px input at 375px.
 - 2026-11-02 · Gap report and lesson waits show `ProgressSteps`: Pip thinking + status lines that tick every 2.6 s and stop on the last one · the work is one server call, so the lines are paced, not real progress events.

@@ -1,6 +1,134 @@
-# DEPLOY.md — Teachback on a fresh Linux server
+# DEPLOY.md — Teachback on your own server
 
-Target: a small Ubuntu 24.04 / Debian 12 VPS (1 vCPU, 1 GB RAM is enough). SQLite lives on the server's disk, so there is no database service. Stack: Node.js LTS → `next start` under **PM2** on `127.0.0.1:3000` → **Nginx** reverse proxy → **certbot** for HTTPS.
+Two ways to run it; both put **Nginx + certbot** in front:
+
+- **Docker (recommended)** — one container, SQLite in a Docker volume, published on `127.0.0.1:3001`. Section 0 below.
+- **PM2 without Docker** — Node.js on the host, `next start` on `127.0.0.1:3000`. Sections 1–11.
+
+## 0. Docker (recommended)
+
+Files: `Dockerfile` (node:22-slim, multi-stage), `docker-compose.yml` (service `teachback`), `docker/entrypoint.sh`, `scripts/docker-backup.sh`, `scripts/docker-restore.sh`. Needs Docker Engine with the Compose plugin (`docker compose version`). Node.js on the host is optional; the `npm run docker:*` shortcuts just wrap the commands shown here.
+
+What the container does:
+- Runs as the unprivileged `node` user (uid 1000), `NODE_ENV=production`, listening on `0.0.0.0:3000` inside the container.
+- On every start: `prisma migrate deploy`, then `next start`. It **never seeds or resets**.
+- The database is `/app/data/teachback.db` in the named volume `teachback-data`. `docker-compose.yml` sets `DATABASE_URL=file:/app/data/teachback.db` under `environment:`, so it wins over a laptop value like `file:./dev.db` in `.env`.
+- Everything else comes from `.env` (`env_file`): `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, `PIP_THINKING`, `DEMO_MODE`, `SESSION_SECRET`. The app refuses to start without `DEMO_MODE` (`true`/`false`) or with a `SESSION_SECRET` under 32 characters, and the container then restarts in a loop with `[startup] …` in the logs.
+- The port is published as `127.0.0.1:3001:3000`: reachable from the server itself (Nginx), never from outside.
+- Healthcheck: `GET /api/health` every 30 s (`docker compose ps` shows `healthy`).
+
+### 0.1 First start
+
+```bash
+git clone <your-repo-url> /srv/teachback && cd /srv/teachback      # any folder works
+cp .env.example .env && chmod 600 .env && nano .env                 # values as in section 3; DATABASE_URL is ignored here
+docker compose up -d --build            # build the image, start; migrations run automatically
+docker compose ps                       # wait for "healthy" (~20 s)
+curl -s http://127.0.0.1:3001/api/health    # {"ok":true,"db":true,"ai":"configured"}
+docker compose exec teachback npm run demo:reset   # ONCE, for demo data (wipes the database!)
+```
+
+### 0.2 Logs, shell, AI check
+
+```bash
+docker compose logs -f teachback                    # "[entrypoint] …", "[ai] pip streamed by …"
+docker compose exec teachback sh                    # shell inside the running container
+docker compose exec teachback npm run ai:check      # which Gemini model answers + streaming speed
+```
+
+### 0.3 Update
+
+```bash
+cd /srv/teachback
+bash scripts/docker-backup.sh                       # safety copy first
+git pull --ff-only && docker compose up -d --build  # rebuilds, restarts; new migrations apply on start
+docker image prune -f                               # drop the old image layers
+```
+
+(Same as `npm run docker:backup && npm run docker:update` if Node is installed on the host.) After changing only `.env`: `docker compose up -d` (recreates the container with the new values).
+
+### 0.4 Backup and restore
+
+```bash
+bash scripts/docker-backup.sh      # → backups/teachback-YYYY-MM-DD_HHMMSS.db, keeps the newest 14
+```
+
+It takes a consistent `sqlite3 .backup` snapshot inside the running container, copies it out of the volume with `docker compose cp`, and deletes the older copies. Daily at 03:15 (`crontab -e` as a user that may run `docker`):
+
+```cron
+15 3 * * * cd /srv/teachback && bash scripts/docker-backup.sh >> backups/backup.log 2>&1
+```
+
+Restore (stops the app, keeps the current DB as `teachback.db.before-restore` in the volume, starts again):
+
+```bash
+bash scripts/docker-restore.sh backups/teachback-2026-11-04_031500.db
+```
+
+### 0.5 Demo reset
+
+```bash
+bash scripts/docker-backup.sh
+docker compose exec teachback npm run demo:reset   # reseeds; the demo live event opens 3 minutes later
+```
+
+Then open `/library/photosynthesis/learn` once so the primer is generated again. For a scripted demo without the API: set `DEMO_MODE=true` in `.env`, then `docker compose up -d`.
+
+### 0.6 Nginx in front of the container
+
+Same as section 6, but proxy to **`127.0.0.1:3001`**:
+
+```nginx
+server {
+    listen 80;
+    server_name teachback.yourdomain.com;
+
+    client_max_body_size 5m;            # voice recordings (≤ 60 s) go to /api/transcribe
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_read_timeout 60s;
+    }
+
+    # Pip's replies stream word by word: don't buffer them.
+    location /api/teach/ {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_buffering off;
+        proxy_read_timeout 120s;
+    }
+}
+```
+
+Then `sudo nginx -t && sudo systemctl reload nginx` and `sudo certbot --nginx -d teachback.yourdomain.com`.
+
+If your Nginx itself runs in a container, `127.0.0.1` is that container, not the server: put Nginx and `teachback` on a shared Docker network and use `proxy_pass http://teachback:3000;` instead (the `ports:` line is then optional).
+
+### 0.7 Docker troubleshooting
+
+| Symptom | Fix |
+|---|---|
+| Container keeps restarting, logs show `[startup] …` | Fix that `.env` value, then `docker compose up -d`. |
+| `unhealthy` | `docker compose logs --tail 50 teachback`; `docker compose exec teachback node -e "fetch('http://127.0.0.1:3000/api/health').then(r=>r.text()).then(console.log)"`. |
+| `prisma migrate deploy` fails on start | A migration doesn't fit the DB: restore the last backup (0.4) and check the migration. |
+| Build fails at `next build` fetching fonts | The build needs internet access (Google Fonts are downloaded at build time). |
+| `502` from Nginx | `docker compose ps`; Nginx must point at `127.0.0.1:3001`. |
+| Need a shell without starting the app | `docker compose run --rm --no-deps teachback sh` (arguments skip migrate + start). |
+
+---
+
+Sections 1–11 below are the **PM2 setup without Docker**. Target: a small Ubuntu 24.04 / Debian 12 VPS (1 vCPU, 1 GB RAM is enough). SQLite lives on the server's disk, so there is no database service. Stack: Node.js LTS → `next start` under **PM2** on `127.0.0.1:3000` → **Nginx** reverse proxy → **certbot** for HTTPS.
 
 Commands marked `sudo` run as root; everything else runs as a normal deploy user (below: `deploy`, home `/home/deploy`).
 

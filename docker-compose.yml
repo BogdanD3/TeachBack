@@ -1,0 +1,31 @@
+# Teachback in Docker. Guide: DEPLOY.md → "Docker".
+#   docker compose up -d --build        build + start (migrations run on start, never a seed)
+#   docker compose logs -f teachback
+#   docker compose exec teachback npm run demo:reset    demo data (wipes the database!)
+services:
+  teachback:
+    build: .
+    image: teachback:latest
+    # Secrets and settings: GEMINI_API_KEY, GEMINI_MODEL, GEMINI_FALLBACK_MODEL, PIP_THINKING,
+    # DEMO_MODE, SESSION_SECRET (≥ 32 chars). The app refuses to start without DEMO_MODE and SESSION_SECRET.
+    env_file: .env
+    environment:
+      # Overrides a laptop value like file:./dev.db from .env: the database lives in the volume.
+      DATABASE_URL: file:/app/data/teachback.db
+      NODE_ENV: production
+    ports:
+      # Only reachable from the server itself (Nginx), never public.
+      - "127.0.0.1:3001:3000"
+    volumes:
+      - teachback-data:/app/data
+    restart: unless-stopped
+    init: true # reaps zombie processes and forwards signals to node
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  teachback-data:

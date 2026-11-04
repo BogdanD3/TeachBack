@@ -14,7 +14,13 @@
     "db:seed": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma db seed",
     "db:reset": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma migrate reset --force",
     "demo:reset": "DATABASE_URL=${DATABASE_URL:-file:./dev.db} prisma migrate deploy && DATABASE_URL=${DATABASE_URL:-file:./dev.db} DEMO_OPENS_IN_MIN=3 prisma db seed",
-    "ai:check": "node --env-file-if-exists=.env --import tsx scripts/ai-check.ts"
+    "ai:check": "node --env-file-if-exists=.env --import tsx scripts/ai-check.ts",
+    "docker:up": "docker compose up -d --build",
+    "docker:logs": "docker compose logs -f teachback",
+    "docker:update": "git pull --ff-only && docker compose up -d --build",
+    "docker:demo-reset": "docker compose exec teachback npm run demo:reset",
+    "docker:ai-check": "docker compose exec teachback npm run ai:check",
+    "docker:backup": "bash scripts/docker-backup.sh"
   },
   "prisma": {
     "seed": "node --import tsx prisma/seed.ts"

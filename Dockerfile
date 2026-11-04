@@ -13,6 +13,8 @@ FROM node:22-slim AS base
 RUN apt-get update -y \
  && apt-get install -y --no-install-recommends openssl ca-certificates sqlite3 \
  && rm -rf /var/lib/apt/lists/*
+# Same npm as the one that wrote package-lock.json (node:22 ships npm 10). Needs Node ≥ 22.22.2.
+RUN npm install -g npm@12.2.1
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 \
     CHECKPOINT_DISABLE=1

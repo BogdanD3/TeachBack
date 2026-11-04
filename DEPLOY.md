@@ -11,6 +11,7 @@ Files: `Dockerfile` (node:22-slim, multi-stage), `docker-compose.yml` (service `
 
 What the container does:
 - Runs as the unprivileged `node` user (uid 1000), `NODE_ENV=production`, listening on `0.0.0.0:3000` inside the container.
+- Installs **npm 12.2.1** in the base stage before any npm command (`node:22` ships npm 10). This must match the npm version that wrote `package-lock.json`: if you upgrade npm locally and commit a new lockfile, update the `npm install -g npm@…` line in the `Dockerfile` too (`npm -v` shows yours). npm 12.2.1 needs Node ≥ 22.22.2; if the build fails at that step, run `docker pull node:22-slim` to get a current Node 22 image.
 - On every start: `prisma migrate deploy`, then `next start`. It **never seeds or resets**.
 - The database is `/app/data/teachback.db` in the named volume `teachback-data`. `docker-compose.yml` sets `DATABASE_URL=file:/app/data/teachback.db` under `environment:`, so it wins over a laptop value like `file:./dev.db` in `.env`.
 - Everything else comes from `.env` (`env_file`): `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, `PIP_THINKING`, `DEMO_MODE`, `SESSION_SECRET`. The app refuses to start without `DEMO_MODE` (`true`/`false`) or with a `SESSION_SECRET` under 32 characters, and the container then restarts in a loop with `[startup] …` in the logs.
